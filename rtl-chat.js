@@ -1,41 +1,22 @@
 (() => {
-  const VERSION = '0.2.3'
+  const VERSION = '0.3.2'
   const STYLE_ID = 'rtl-chat-style'
-  const BADGE_ID = 'rtl-chat-badge'
+  const CHROME_STYLE_ID = 'rtl-chat-chrome'
+  const TOGGLE_ID = 'rtl-chat-toggle'
+  const MODE_KEY = 'rtlChat:mode'
+  const SCOPES_KEY = 'rtlChat:extraScopes'
   const VIA = 'ext'
 
+  // '' in source — tools/build.mjs embeds the Vazirmatn data-URI @font-face rules here
+  const FONT_FACE_CSS = /*@FONT_FACE_START@*/''/*@FONT_FACE_END@*/
+
+  // No container-level rtl: scrollbars stay right, ZCode chrome (headers,
+  // reasoning UI, actions) keeps its own LTR layout. Direction is decided per
+  // text block by JS (any-rtl) — only produced text flips.
   const CSS = `
-/* RTL Chat v0.2.3 — direction decided per message by first word (JS sets [dir]).
-   Timeline keeps rtl as layout shell; message roots override with their own dir. */
+/* RTL Chat v0.3.2 — any-rtl: direction decided per text block by RTL-character
+   presence (not first word). Containers stay LTR. */
 
-[data-v4-timeline-scroll],
-[data-v4-timeline-message-layer],
-[data-v4-timeline-content-column],
-[data-v4-timeline-virtual-history],
-[data-trajectory-timeline],
-[data-v4-draft-greeting],
-[data-v4-draft-suggested-prompts],
-[data-testid="chat-empty"] {
-  direction: rtl;
-}
-
-/* User row is flex-col + items-end (bubble on the right in original LTR).
-   Inherited rtl flips items-end to the left — force LTR layout only on the row.
-   Text direction still comes from each bubble's own [dir]. */
-[data-v4-timeline-scroll] [class*="group/user-row"] {
-  direction: ltr;
-}
-
-/* Composer sits inside timeline-scroll (rtl) — restore original LTR chrome/toolbars */
-[data-v4-composer-dock],
-[data-v4-composer-dock-content],
-[data-v4-composer-dock] form,
-[data-v4-composer-dock] [class*="group/toolbar"] {
-  direction: ltr !important;
-}
-
-/* Message roots: JS sets dir from first word. text-align:start follows it
-   (rtl → right, ltr → left). Do NOT force direction/text-align here. */
 [data-trajectory-message-role],
 [data-trajectory-message-content],
 [data-trajectory-expanded-content-shell],
@@ -52,18 +33,13 @@
   text-align: start;
 }
 
-[data-trajectory-role-label] {
-  padding-right: 0 !important;
-  padding-left: 0.25rem !important;
-}
-
-/* Radius flip only when that user message is actually RTL (first word Persian) */
+/* Radius flip only when that user message is actually RTL */
 [data-v4-user-input-bubble][dir="rtl"] {
   border-top-left-radius: 0.125rem !important;
   border-top-right-radius: 0.75rem !important;
 }
 
-/* Editor: dir set live by JS from typed first word — no blanket rtl */
+/* Editor: dir set live by JS from typed text — no blanket rtl */
 [data-lexical-editor="true"] p,
 [data-testid="chat-input"] p {
   text-align: start;
@@ -104,54 +80,99 @@ samp,
   unicode-bidi: isolate !important;
 }
 
-/* Flip Tailwind text-left only inside an RTL message root */
-[data-v4-timeline-scroll] [dir="rtl"] [class~="text-left"],
-[data-v4-timeline-scroll] [class~="text-left"][dir="rtl"] {
+/* Flip Tailwind text-left only inside an RTL block */
+[dir="rtl"] [class~="text-left"],
+[class~="text-left"][dir="rtl"] {
   text-align: right !important;
+}
+
+/* Vazirmatn for RTL-directed chat text; mono areas keep ZCode's own font */
+[dir="rtl"] {
+  font-family: 'Vazirmatn', 'Vazir', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
+}
+
+[dir="rtl"] pre,
+[dir="rtl"] code,
+[dir="rtl"] kbd,
+[dir="rtl"] samp,
+[dir="rtl"] [data-streamdown="inline-code"] {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, 'Courier New', monospace);
 }
 `
 
+  // Toggle chrome — injected ALWAYS (on and off), independent of the behavior
+  // style above so the button never loses its styling when RTL is off.
+  const CHROME_CSS = `
+#rtl-chat-toggle svg { display: block; }
+#rtl-chat-toggle.rtl-chat-fallback:hover { opacity: 1 !important; }
+#rtl-chat-toggle:active { transform: scale(0.94); }
+`
+
+  // Inline fallback geometry — survives even total stylesheet loss
+  const FALLBACK_CSS_TEXT = [
+    'position:fixed',
+    'bottom:84px',
+    'right:16px',
+    'z-index:2147483647',
+    'width:32px',
+    'height:32px',
+    'display:flex',
+    'align-items:center',
+    'justify-content:center',
+    'padding:0',
+    'margin:0',
+    'background:rgba(24,24,28,0.9)',
+    'color:#e5e5e5',
+    'border:1px solid rgba(255,255,255,0.14)',
+    'border-radius:8px',
+    'cursor:pointer',
+    'box-shadow:0 1px 4px rgba(0,0,0,0.3)',
+    'opacity:0.85',
+    'transition:opacity 0.15s'
+  ].join(';')
+
+  // Only elements that carry produced text — never whole-message wrappers,
+  // so ZCode chrome (headers, reasoning UI, actions) keeps its own direction.
   const DIR_SELECTORS = [
-    '[data-trajectory-message-content]',
-    '[data-trajectory-expanded-content-shell]',
     '[data-trajectory-user-content-card]',
     '[data-v4-user-input-bubble]',
-    '[data-reasoning-content]',
-    '[data-streamdown]',
-    '[data-v4-draft-greeting]',
     '[data-lexical-editor="true"]',
     '[data-lexical-editor="true"] p',
     '[data-testid="chat-input"]',
     '[data-testid="chat-input"] p'
   ]
 
-  const SELECTORS = [
-    '[data-workspace-conversation-frame]',
-    '[data-v4-timeline-scroll]',
-    '[data-v4-timeline-content-column]',
-    '[data-trajectory-timeline]',
-    '[data-trajectory-message-role="user"]',
-    '[data-trajectory-message-role="assistant"]',
-    '[data-v4-user-input-bubble]',
-    '[data-v4-composer-dock="true"]',
-    '[data-lexical-editor="true"]',
-    '[data-testid="chat-input"]',
-    '[data-streamdown="code-block"]',
-    '[data-v4-draft-greeting]'
-  ]
+  // Any-RTL (port of obsidian-any-rtl): one RTL-script character anywhere in the
+  // text → rtl, otherwise ltr. The old first-word rule returned null for text
+  // starting with digits/punctuation/markdown and those inherited rtl from the
+  // shell — that was GitHub issue #1 (English and code going right-to-left).
+  const RTL_RE = /[\u0590-\u05FF\u0600-\u06FF\u0700-\u074F\u0750-\u077F\u0780-\u07BF\u07C0-\u07FF\u0800-\u083F\u0840-\u085F\u0870-\u089F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/
 
-  // First word → direction: Persian/Arabic letter → rtl, Latin letter → ltr.
-  // Leading digits/punctuation inside that word are skipped; no letter → null.
-  function firstWordDir(text) {
-    const t = String(text || '').replace(/^\s+/, '')
-    if (!t) return null
-    const word = t.match(/^\S+/)
-    if (!word) return null
-    for (const ch of word[0]) {
-      if (/[؀-ۿݐ-ݿࢠ-ࣿיִ-﷿ﹰ-﻿]/.test(ch)) return 'rtl'
-      if (/[A-Za-z]/.test(ch)) return 'ltr'
-    }
-    return null
+  function detectDir(text) {
+    const t = String(text || '')
+    if (!t.trim()) return null
+    return RTL_RE.test(t) ? 'rtl' : 'ltr'
+  }
+
+  function getMode() {
+    try { return localStorage.getItem(MODE_KEY) === 'off' ? 'off' : 'any-rtl' } catch (_) { return 'any-rtl' }
+  }
+
+  // Extra areas (tasks panel, etc.) to any-rtl beyond the chat timeline.
+  // Comma-separated CSS selectors in localStorage — empty by default, zero risk.
+  function extraScopes() {
+    try {
+      return (localStorage.getItem(SCOPES_KEY) || '').split(',').map(s => s.trim()).filter(Boolean)
+    } catch (_) { return [] }
+  }
+
+  function setMode(m) {
+    try { localStorage.setItem(MODE_KEY, m) } catch (_) {}
+    document.documentElement.setAttribute('data-rtl-chat', m === 'off' ? 'off' : 'on')
+    if (m === 'off') cleanup()
+    else { ensureStyle(); applyDirs() }
+    updateToggle()
+    debugInfo()
   }
 
   function via() {
@@ -167,13 +188,43 @@ samp,
       style.id = STYLE_ID
       ;(document.head || document.documentElement).appendChild(style)
     }
-    if (style.textContent !== CSS) style.textContent = CSS
+    const css = FONT_FACE_CSS + CSS
+    if (style.textContent !== css) style.textContent = css
+  }
+
+  function ensureChromeStyle() {
+    let style = document.getElementById(CHROME_STYLE_ID)
+    if (!style) {
+      style = document.createElement('style')
+      style.id = CHROME_STYLE_ID
+      ;(document.head || document.documentElement).appendChild(style)
+    }
+    if (style.textContent !== CHROME_CSS) style.textContent = CHROME_CSS
+  }
+
+  function cleanup() {
+    const style = document.getElementById(STYLE_ID)
+    if (style) style.remove()
+    const sel = '[data-v4-timeline-scroll], [data-v4-composer-dock], [data-trajectory-timeline]'
+    const rooted = document.querySelectorAll(sel)
+    for (const root of rooted) {
+      for (const el of root.querySelectorAll('[dir]')) el.removeAttribute('dir')
+      if (root.hasAttribute && root.hasAttribute('dir')) root.removeAttribute('dir')
+    }
+    for (const scope of extraScopes()) {
+      let roots = []
+      try { roots = document.querySelectorAll(scope) } catch (_) { continue }
+      for (const root of roots) {
+        for (const el of root.querySelectorAll('[dir]')) el.removeAttribute('dir')
+        if (root.hasAttribute && root.hasAttribute('dir')) root.removeAttribute('dir')
+      }
+    }
   }
 
   function applyDir(el, emptyDefault) {
-    if (!el) return
+    if (!el || getMode() === 'off') return
     const text = el.innerText || el.textContent || ''
-    let d = firstWordDir(text)
+    let d = detectDir(text)
     if (!d && !text.trim() && emptyDefault) d = emptyDefault
     if (!d) return
     if (el.dir !== d) el.dir = d
@@ -189,13 +240,37 @@ samp,
     return true
   }
 
-  function applyDirs() {
-    const seen = new Set()
-
-    // turn-unit mixes user + assistant — never set dir from the whole block
-    for (const el of document.querySelectorAll('[data-v4-turn-unit]')) {
-      if (el.hasAttribute('dir')) el.removeAttribute('dir')
+  // Per-text-block direction inside one root: p/li/headings decide by their own
+  // content; leaf labels follow their own text only when no ancestor directed them.
+  function scanBlocks(root, seen) {
+    const sel = 'p, li, h1, h2, h3, h4, button[data-testid^="chat-assistant-history-trigger"]'
+    for (const el of root.querySelectorAll(sel)) {
+      if (seen.has(el)) continue
+      if (el.closest('[data-v4-composer-dock]')) continue
+      seen.add(el)
+      applyDir(el, null)
     }
+
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+    let node
+    const leafSeen = new Set()
+    while ((node = walker.nextNode())) {
+      const text = (node.nodeValue || '').trim()
+      if (text.length < 3) continue
+      let el = node.parentElement
+      if (!el || leafSeen.has(el) || seen.has(el)) continue
+      if (el.closest('[data-v4-composer-dock]')) continue
+      if (el.closest('[dir]')) continue
+      if (!isLeafish(el)) continue
+      leafSeen.add(el)
+      seen.add(el)
+      applyDir(el, null)
+    }
+  }
+
+  function applyDirs() {
+    if (getMode() === 'off') return
+    const seen = new Set()
 
     for (const sel of DIR_SELECTORS) {
       let nodes = []
@@ -209,41 +284,16 @@ samp,
       }
     }
 
-    // Each text block under the timeline decides by its own first word
-    // (paragraphs, history triggers, headings — not composer chrome)
-    const blockSel = [
-      '[data-v4-timeline-scroll] p',
-      '[data-v4-timeline-scroll] button[data-testid^="chat-assistant-history-trigger"]',
-      '[data-v4-timeline-scroll] h1',
-      '[data-v4-timeline-scroll] h2',
-      '[data-v4-timeline-scroll] h3',
-      '[data-v4-timeline-scroll] h4',
-      '[data-v4-timeline-scroll] li'
-    ].join(',')
-    for (const el of document.querySelectorAll(blockSel)) {
-      if (seen.has(el)) continue
-      if (el.closest('[data-v4-composer-dock]')) continue
-      seen.add(el)
-      applyDir(el, null)
-    }
-
-    // Leaf labels (system rows, truncated spans) with no directed ancestor
     const timeline = document.querySelector('[data-v4-timeline-scroll]')
-    if (timeline) {
-      const walker = document.createTreeWalker(timeline, NodeFilter.SHOW_TEXT)
-      let node
-      const leafSeen = new Set()
-      while ((node = walker.nextNode())) {
-        const text = (node.nodeValue || '').trim()
-        if (text.length < 3) continue
-        let el = node.parentElement
-        if (!el || leafSeen.has(el) || seen.has(el)) continue
-        if (el.closest('[data-v4-composer-dock]')) continue
-        if (el.closest('[dir]')) continue
-        if (!isLeafish(el)) continue
-        leafSeen.add(el)
-        seen.add(el)
-        applyDir(el, null)
+    if (timeline) scanBlocks(timeline, seen)
+
+    for (const scope of extraScopes()) {
+      let roots = []
+      try { roots = document.querySelectorAll(scope) } catch (_) { continue }
+      for (const root of roots) {
+        if (seen.has(root)) continue
+        seen.add(root)
+        scanBlocks(root, seen)
       }
     }
 
@@ -251,6 +301,7 @@ samp,
     if (ed && !ed.__rtlChatHooked) {
       ed.__rtlChatHooked = true
       const update = () => {
+        if (getMode() === 'off') return
         applyDir(ed, 'rtl')
         ed.querySelectorAll('p').forEach(p => applyDir(p, 'rtl'))
       }
@@ -259,52 +310,149 @@ samp,
     }
   }
 
-  function updateBadge() {
-    let badge = document.getElementById(BADGE_ID)
-    if (!badge) {
-      badge = document.createElement('div')
-      badge.id = BADGE_ID
-      ;(document.body || document.documentElement).appendChild(badge)
+  function toggleSvg(off) {
+    return '<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" ' +
+      'stroke-width="1.7" stroke-linecap="round" aria-hidden="true">' +
+      '<path d="M3 3.5h10M6.5 8H13M4.5 12.5H13"/>' +
+      (off ? '<path d="M2.5 13.5L13.5 2.5"/>' : '') +
+      '</svg>'
+  }
+
+  function firstVisibleButton(root) {
+    for (const b of root.querySelectorAll('button')) {
+      const r = b.getBoundingClientRect()
+      if (r.width > 0 && r.height > 0) return b
     }
-    badge.style.cssText = [
-      'position:fixed',
-      'bottom:14px',
-      'right:16px',
-      'left:auto',
-      'z-index:2147483647',
-      'background:rgba(185,28,28,0.92)',
-      'color:#fff',
-      'padding:2px 7px',
-      'border-radius:4px',
-      'font:700 11px/1.3 system-ui,sans-serif',
-      'letter-spacing:0.06em',
-      'direction:ltr',
-      'pointer-events:none',
-      'box-shadow:0 1px 3px rgba(0,0,0,.25)'
-    ].join(';')
-    badge.textContent = 'RTL'
+    return null
+  }
+
+  // Composer toolbar to host the toggle — nearest stable anchor first
+  function toolbarFor() {
+    const docks = document.querySelectorAll('[data-v4-composer-dock]')
+    const sels = [
+      'form [class*="group/toolbar"]',
+      '[class*="group/toolbar"]',
+      'form [class*="toolbar"]',
+      '[class*="toolbar"]'
+    ]
+    for (const dock of docks) {
+      for (const sel of sels) {
+        let tb = null
+        try { tb = dock.querySelector(sel) } catch (_) { continue }
+        if (tb && firstVisibleButton(tb)) return tb
+      }
+    }
+    return null
+  }
+
+  function ensureButton() {
+    const tb = toolbarFor()
+    const wantHost = tb ? 'bar' : 'float'
+    let btn = document.getElementById(TOGGLE_ID)
+    if (btn && btn.isConnected && btn.dataset.rtlChatHost === wantHost) {
+      updateToggle()
+      return
+    }
+    if (btn) btn.remove()
+    btn = document.createElement('button')
+    btn.id = TOGGLE_ID
+    btn.type = 'button'
+    btn.draggable = false
+    if (tb) {
+      // borrow a visible sibling button's classes so the toggle blends into ZCode's toolbar
+      const sibling = firstVisibleButton(tb)
+      if (sibling) btn.className = sibling.className
+      btn.classList.add('rtl-chat-inbar')
+    }
+    btn.innerHTML = toggleSvg(getMode() === 'off')
+    btn.__rtlSvg = btn.innerHTML
+    btn.addEventListener('mousedown', e => e.preventDefault())
+    btn.addEventListener('click', e => {
+      e.preventDefault()
+      e.stopPropagation()
+      setMode(getMode() === 'off' ? 'any-rtl' : 'off')
+    })
+    const host = tb || document.body
+    if (!host) return
+    host.appendChild(btn)
+    if (tb) {
+      // cloned classes must not hide the toggle — if they do, go floating instead
+      const r = btn.getBoundingClientRect()
+      if (r.width > 0 && r.height > 0) {
+        btn.dataset.rtlChatHost = 'bar'
+        updateToggle()
+        return
+      }
+    }
+    // floating fallback with inline geometry — can never lose visibility
+    btn.className = 'rtl-chat-fallback'
+    btn.style.cssText = FALLBACK_CSS_TEXT
+    if (btn.parentElement !== document.body) document.body.appendChild(btn)
+    btn.dataset.rtlChatHost = 'float'
+    updateToggle()
+  }
+
+  function updateToggle() {
+    const btn = document.getElementById(TOGGLE_ID)
+    if (!btn) return
+    const on = getMode() !== 'off'
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false')
+    btn.title = on ? 'راست‌چین: روشن (any-rtl)' : 'راست‌چین: خاموش'
+    const svg = toggleSvg(!on)
+    if (btn.__rtlSvg !== svg) {
+      btn.innerHTML = svg
+      btn.__rtlSvg = svg
+    }
+    // inline opacity — independent of any stylesheet
+    btn.style.opacity = on ? (btn.dataset.rtlChatHost === 'bar' ? '' : '0.85') : '0.5'
+  }
+
+  function debugInfo() {
     window.__RTL_CHAT = {
       version: VERSION,
       via: via(),
+      mode: getMode(),
       style: !!document.getElementById(STYLE_ID),
+      toggle: !!document.getElementById(TOGGLE_ID),
+      toggleHost: (document.getElementById(TOGGLE_ID) || {}).dataset?.rtlChatHost || null,
+      scopes: extraScopes().length,
       ready: document.readyState
     }
   }
 
-  function boot() {
-    const first = !window.__RTL_CHAT_BOOTED
-    window.__RTL_CHAT_BOOTED = true
-    if (first) document.documentElement.setAttribute('data-rtl-chat', 'on')
+  function tick() {
     via()
-    ensureStyle()
-    applyDirs()
-    updateBadge()
-    if (window.__RTL_CHAT_TIMER) clearInterval(window.__RTL_CHAT_TIMER)
-    window.__RTL_CHAT_TIMER = setInterval(() => {
+    try { ensureChromeStyle() } catch (_) {}
+    try { ensureButton() } catch (_) {}
+    if (getMode() !== 'off') {
       ensureStyle()
       applyDirs()
-      updateBadge()
-    }, 2000)
+    }
+    debugInfo()
+  }
+
+  function boot() {
+    window.__RTL_CHAT_BOOTED = true
+    document.documentElement.setAttribute('data-rtl-chat', getMode() === 'off' ? 'off' : 'on')
+    via()
+    tick()
+    if (window.__RTL_CHAT_TIMER) clearInterval(window.__RTL_CHAT_TIMER)
+    window.__RTL_CHAT_TIMER = setInterval(tick, 2000)
+
+    // live re-direction while streaming (2s interval stays as a safety net)
+    if (!window.__RTL_CHAT_MO && (document.body || document.documentElement)) {
+      let t = null
+      const mo = new MutationObserver(() => {
+        if (t) clearTimeout(t)
+        t = setTimeout(() => { t = null; try { tick() } catch (_) {} }, 150)
+      })
+      mo.observe(document.body || document.documentElement, {
+        childList: true,
+        subtree: true,
+        characterData: true
+      })
+      window.__RTL_CHAT_MO = mo
+    }
   }
 
   if (document.readyState === 'loading') {

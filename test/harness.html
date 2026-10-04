@@ -1,0 +1,51 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>RTL Chat Harness</title></head>
+<body>
+  <div data-workspace-conversation-frame>
+    <div data-v4-timeline-scroll>
+      <div data-trajectory-timeline>
+        <div data-trajectory-message-role="assistant">
+          <div data-trajectory-role-label id="role-label">GLM 5.3</div>
+          <div data-trajectory-message-content id="msg-assistant">
+            <p id="p-fa">سلام این یک پیام فارسی است</p>
+            <p id="p-en">This is an English paragraph.</p>
+            <p id="p-num">12345 dollars were spent on tools.</p>
+            <p id="p-md">**bold start** and some text</p>
+            <p id="p-mixed">ZCode یه ابزار خوبیه</p>
+            <p id="p-mixed2">a b ث</p>
+            <div data-streamdown="code-block" id="code-block"><pre><code id="code-inner">const x = 1;</code></pre></div>
+          </div>
+        </div>
+        <div data-trajectory-message-role="user">
+          <div class="group/user-row">
+            <div data-v4-user-input-bubble id="user-bubble">
+              <div data-trajectory-user-content-card id="user-card"><p id="p-user-en">Hello there general</p></div>
+            </div>
+          </div>
+        </div>
+        <div data-trajectory-message-role="assistant">
+          <div data-reasoning-content id="reasoning">
+            <div id="think-head">Thinking</div>
+            <p id="p-think-en">Reasoning in English only here</p>
+            <p id="p-think-fa">این بخش فکر کردن فارسی است</p>
+          </div>
+          <div data-trajectory-message-content id="msg-asst2"><p id="p-en2">Second English message entirely</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div data-v4-composer-dock>
+    <form id="composer-form">
+      <div class="group/toolbar" id="toolbar">
+        <button type="button" class="tb-btn one" id="tb1">A</button>
+        <button type="button" class="tb-btn two" id="tb2">B</button>
+      </div>
+      <div data-testid="chat-input" id="chat-input">
+        <div data-lexical-editor="true" id="editor"><p><br></p></div>
+      </div>
+    </form>
+  </div>
+  <script src="../extension/rtl-chat.js"></script>
+</body>
+</html>

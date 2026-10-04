@@ -53,7 +53,7 @@ async function main() {
     const c = await connect(t.webSocketDebuggerUrl)
     await c.send('Runtime.enable').catch(() => {})
     const r = await c.send('Runtime.evaluate', {
-      expression: 'document.title + " | ready=" + document.readyState + " | badge=" + !!document.getElementById("rtl-chat-badge") + " | style=" + !!document.getElementById("rtl-chat-style") + " | vias=" + JSON.stringify(window.__RTL_CHAT_VIAS || []) + " | booted=" + !!window.__RTL_CHAT_BOOTED + " | rtlAttr=" + document.documentElement.getAttribute("data-rtl-chat") + " | bodyLen=" + (document.body ? document.body.innerHTML.length : -1)',
+      expression: 'document.title + " | ready=" + document.readyState + " | toggle=" + !!document.getElementById("rtl-chat-toggle") + " | style=" + !!document.getElementById("rtl-chat-style") + " | mode=" + ((window.__RTL_CHAT || {}).mode || "?") + " | vias=" + JSON.stringify(window.__RTL_CHAT_VIAS || []) + " | booted=" + !!window.__RTL_CHAT_BOOTED + " | rtlAttr=" + document.documentElement.getAttribute("data-rtl-chat") + " | bodyLen=" + (document.body ? document.body.innerHTML.length : -1)',
       returnByValue: true,
       awaitPromise: false,
       userGesture: true

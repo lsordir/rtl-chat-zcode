@@ -1,328 +1,112 @@
 # rtl-chat-zcode
 
-RTL (right-to-left) chat patch for **ZCode Desktop** — makes Persian/Arabic messages display right-aligned, while English stays left-aligned.
+RTL (right-to-left) chat patch for **ZCode Desktop** — smart **any-rtl**: any text block containing Persian/Arabic becomes right-aligned, pure-English blocks (and code, tables, math, UI chrome) stay left-aligned. Ships with the **Vazirmatn** font, an **always-visible on/off toggle**, one-click **install/uninstall**, and no floating badge.
 
-> **Note:** This is a community-made patch. It modifies ZCode's internal `app.asar` file to auto-load a small browser extension. NOT affiliated with ZCode. Re-apply after every ZCode update.
-
-## Quick install (Windows, PowerShell)
-
-1. **Clone or download** this repo (green `Code` button → Download ZIP, then extract).
-2. **Fully quit ZCode** (tray icon → Quit; `Ctrl+Shift+Esc` → End task `ZCode.exe` if needed).
-3. Open **Windows PowerShell as Administrator**.
-4. `cd` into the repo folder:
-
-```powershell
-cd "C:\path\to\rtl-chat-zcode"
-```
-
-5. Find where ZCode is installed:
-
-```powershell
-Get-ChildItem -Path "$env:LOCALAPPDATA\Programs","C:\Program Files" -Filter "ZCode.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 3 FullName
-```
-
-6. Apply the patch (one line — note the `;` in the middle):
-
-```powershell
-$env:ZCODE_ASAR = "<path-from-step-5>\resources\app.asar"; node asar-work\patch-asar.mjs --apply
-```
-
-You should see `APPLY DONE` at the end.
-
-7. Open ZCode normally. Look for the small red **RTL** badge (bottom-right).
-8. Send a Persian message → right-aligned. Send an English message → left-aligned.
-
-After every ZCode update, repeat steps 2–6.
+> This is a community-made patch. It modifies ZCode's internal `app.asar` to auto-load a small browser extension. NOT affiliated with ZCode. Re-apply after every ZCode update (or just run `install.bat` again).
 
 ---
 
-<details>
-<summary>🇮🇷 آموزش فارسی (کلیک کنید)</summary>
+## 🇮🇷 راهنمای فارسی
 
-# RTL Chat برای ZCode Desktop
+پکیج راست‌چین کردن چت فارسی در ZCode Desktop — با تشخیص هوشمند any-rtl، دکمه خاموش/روشن همیشه در دسترس، فونت وزیرمتن، و نصب/حذف با یک کلیک.
 
-پکیج کوچک برای **راستچین (RTL) کردن چت فارسی** در ZCode.
+### ✨ قابلیت‌ها
 
-اگر تا حالا با ZCode فارسی تایپ کردهاید و متنها برعکس چیده میشوند، این پکیج همان مشکل را درست میکند.
+- **تشخیص any-rtl** — جهت هر پاراگراف از روی *وجود حتی یک حرف فارسی/عربی* در همان پاراگراف. «ZCode یه ابزار خوبیه» راست‌چین میشود؛ پاراگراف انگلیسی کنارش چپ‌چین میماند؛ متنی که با عدد یا مارک‌داون شروع شود هم دیگر راست‌چین نمیشود (رفع باگ issue #1).
+- **فقط متن تولیدشده** — هدرها، لیبل‌ها، رابط thinking، دکمه‌ها و کروم ZCode دست‌نخورده میمانند؛ اسکرول‌بار هم همیشه سمت راست میماند.
+- **دکمه خاموش/روشن RTL** — در نوار ابزار جعبه پیام (یا به‌صورت دکمه شناور بالای آن). در حالت خاموش آیکونش خط‌خورده میشود ولی **هیچ‌وقت ناپدید نمیشود**. انتخاب شما ذخیره میشود.
+- **فونت وزیرمتن** — داخل خود پچ جاسازی شده؛ بدون نصب فونت روی ویندوز و بدون اینترنت. کد و جدول فونت قبلی خودشان را نگه میدارند.
+- **بهروزرسانی زنده** — موقع استریم شدن جواب، جهت پاراگرافها بلافاصله درست میشود.
 
-**نسخه:** 0.2.3
-**سیستمعامل:** ویندوز (روی هر دو نصبِ `C:\Program Files\ZCode` و نصبِ کاربری `AppData\Local\Programs\ZCode` آزموده شده)
-**پیشنیاز:**
-- نصب بودن [Node.js](https://nodejs.org) (موقع نصب، تیکهای پیشفرض را نگه دارید)
-- همه دستورهای این آموزش برای **Windows PowerShell** است (ترمینال آبی ویندوز). اگر CMD باز کنید، بعضی دستورها فرق دارند.
+### 🚀 نصب با یک کلیک
+
+پیشنیاز: [Node.js](https://nodejs.org) نصب باشد.
+
+1. روی **`install.bat`** دوبار کلیک کنید. (اگر ZCode باز باشد، خودش میبنددش.)
+2. پیام `[OK] Installed` را ببینید.
+3. ZCode را عادی باز کنید — دکمه RTL کنار جعبه پیام است.
+
+پچ روی فایل `resources\app.asar` داخل نصب ZCode اعمال میشود (خودکار در `AppData\Local\Programs\ZCode` یا `C:\Program Files\ZCode` پیدا میشود). بکاپ در `asar-work\app.asar.bak` ساخته میشود — پاکش نکنید.
+
+> بعد از هر **آپدیت خودکار ZCode**، پچ پاک میشود؛ فقط دوباره `install.bat` را اجرا کنید.
+
+### 🗑 حذف با یک کلیک
+
+روی **`uninstall.bat`** دوبار کلیک کنید — بکاپ اصلی را سر جایش برمیگرداند و ZCode دقیقاً مثل قبل میشود.
+
+> چرا حذف از داخل خود ZCode ممکن نیست؟ چون این پچ در `app.asar` (خارج از دسترس افزونه) نوشته میشود، نه در سیستم افزونه ZCode. اگر روزی ZCode سیستم افزونه رسمی بدهد، همین پکیج میتواند به آن مهاجرت کند.
+
+### 🎛 استفاده
+
+- **دکمه RTL** کنار جعبه پیام: کلیک = خاموش/روشن. حالت در حافظه میماند.
+- کد، جدول، فرمول و ترمینال همیشه چپ‌چین میمانند.
+- خروجی کد و متن انگلیسی خالص دیگر راست‌چین نمیشود.
+
+### 🔧 پیشرفته: راست‌چین کردن بخشهای دیگر (تسک‌ها و ...)
+
+به‌صورت پیشفرض فقط تایم‌لاین چت اسکن میشود — صفر ریسک برای بقیه محیط. برای اضافه کردن یک بخش دیگر (مثلاً پنل تسک‌ها)، selector آن بخش را در `localStorage` بگذارید:
+
+```js
+// در کنسول DevTools صفحه چت (Ctrl+Shift+I):
+localStorage.setItem('rtlChat:extraScopes', '[SELECTOR-بخش-موردنظر]')
+// پاک کردن: localStorage.removeItem('rtlChat:extraScopes')
+```
+
+قبل از فعال کردن هر scope جدید، یک بار `install.bat` را دوباره اجرا کنید تا بکاپ تازه باشد و در ریپو هم `git commit` بزنید. selectorهای دقیق تسک‌ها هنوز باید از DOM واقعی ZCode استخراج شوند (با `--remote-debugging-port=9229` قابل بررسی است).
+
+### ✅ تأیید نصب (اختیاری)
+
+1. ZCode را با فلگ دیباگ باز کنید:
+   ```powershell
+   Start-Process "مسیر\ZCode.exe" -ArgumentList "--remote-debugging-port=9229"
+   ```
+2. چند ثانیه صبر، بعد: `node verify-no-inject.mjs`
+3. باید ببینید: `toggle=true`, `style=true`, `mode=any-rtl`, `rtlAttr=on`
+
+### 🛠 نصب دستی (اگر bat کار نکرد)
+
+```powershell
+# PowerShell در پوشه پروژه
+$env:ZCODE_ASAR = "C:\Users\YOU\AppData\Local\Programs\ZCode\resources\app.asar"
+node asar-work\patch-asar.mjs --apply   # باید APPLY DONE ببیندید
+```
+
+بازگردانی دستی:
+```powershell
+Copy-Item -Force asar-work\app.asar.bak "مسیر\resources\app.asar"
+```
+(اگر ZCode زیر Program Files است، PowerShell را Run as administrator باز کنید.)
+
+### ⚠️ عیبیابی
+
+| مشکل | راه‌حل |
+|------|--------|
+| `node` پیدا نشد | Node.js را نصب کنید و ترمینال را ببندید و دوباره باز کنید. |
+| `EPERM` موقع پچ | PowerShell را Run as administrator باز کنید. |
+| `anchor missing` | نسخه ZCode عوض شده — پچ باید بهروز شود. |
+| دکمه RTL نیست | ZCode را کامل ببندید و باز کنید؛ اگر آپدیت شده، `install.bat` را دوباره بزنید. اگر نوار ابزار پیدا نشود، دکمه شناور بالای جعبه پیام (گوشه پایین-راست) میآید — در حالت خاموش آیکونش خطخورده است. |
+| بعد از آپدیت ZCode پچ رفت | دوباره `install.bat`. |
+| متنها راستچین نمیشوند | دکمه RTL را چک کنید (حالت خاموش = آیکون خطخورده). |
 
 ---
 
-## این zip چیست؟ (به زبان ساده)
+## 🇬🇧 English (quick)
 
-مثل یک **چسبانه** است:
+1. Install [Node.js](https://nodejs.org).
+2. Double-click **`install.bat`** (it finds ZCode, closes it, patches `app.asar`, keeps a backup in `asar-work\app.asar.bak`).
+3. Start ZCode — use the RTL toggle near the chat input. Click again to turn it off; the button never disappears (slashed icon = off).
+4. Uninstall: double-click **`uninstall.bat`** (restores the original `app.asar`).
 
-1. یک **افزونه کوچک مرورگر** داریم که CSS/JS مخصوص راستچین را داخل صفحه چت میریزد (`extension/`).
-2. ZCode از جعبهاش این افزونه را لود **نمیکند**. برای همین یک **پچ کوچک** روی فایل داخلی `app.asar` میزنیم تا هر بار که ZCode باز میشود، خودش این افزونه را بالا بیاورد.
-3. بعد از یک بار پچ کردن، دفعات بعد فقط مثل همیشه ZCode را باز میکنید — دیگر فلگ خاصی لازم نیست.
+**any-rtl:** any text block with a Persian/Arabic/Hebrew character → RTL; English-only blocks, code, tables and all UI chrome stay LTR. Scrollbar stays on the right. Vazirmatn font is embedded for RTL text.
 
----
+**Extra scopes:** `localStorage.setItem('rtlChat:extraScopes', '<css-selector>')` extends any-rtl to other panels (empty by default).
 
-## فهرست فایلها
-
-| فایل / پوشه | چیست؟ |
-|-------------|--------|
-| `extension/manifest.json` | معرفی افزونه برای مرورگر/الکترون |
-| `extension/rtl-chat.js` | کد اصلی راستچین (همین داخل صفحه اجرا میشود) |
-| `rtl-chat.js` | **نسخه منبع** — اگر خواستید کد را ویرایش کنید، این را عوض کنید و بعد در `extension\rtl-chat.js` کپی کنید |
-| `asar-work/patch-asar.mjs` | اسکریپت پچ کردن `app.asar` (فاز اصلی نصب) |
-| `verify-no-inject.mjs` | فقط **خواندن** وضعیت — برای مطمئن شدن که پچ کار میکند |
-| `start-zcode-rtl.bat` | راه اضطراری/قدیمی: باز کردن ZCode با فلگ + تزریق دستی (اگر پچ جواب نداد) |
-| `inject-cdp.mjs` | تزریق دستی از راه پورت دیباگ (همراه bat) |
-
-داخل `asar-work\` بعد از اولین اجرا، فایل بکاپ `app.asar.bak` ساخته میشود. آن را پاک نکنید تا بتوانید برگردانید.
+Re-run `install.bat` after every ZCode update.
 
 ---
 
-## نصب — هشت قدم (برای اولین بار)
-
-### قدم ۱ — فایل زیپ را باز کنید
-
-روی `rtl-chat-patch-0.2.3.zip` راستکلیک کنید → **Extract All...** → یک پوشه به اسم `rtl-chat-patch` ساخته میشود.
-
-جای پوشه هر جا میخواهد باشد (دسکتاپ، دانلودها، ...) — فقط در قدم ۴ آدرس واقعیاش را بدهید.
-
-### قدم ۲ — ZCode را کامل ببندید
-
-نه فقط پنجره را ببندید. اگر آیکون در سینی سیستم (گوشه راست پایین کنار ساعت) هست، روی آن راستکلیک و **Quit / خروج** بزنید.
-
-چک: `Ctrl+Shift+Esc` → اگر `ZCode.exe` در لیست هست، آن را **End task** کنید.
-
-### قدم ۳ — ترمینال PowerShell را باز کنید
-
-دکمه ویندوز را بزنید → تایپ کنید `powershell` → روی **Windows PowerShell** راستکلیک → **Run as administrator**.
-
-> چرا Admin؟ اگر ZCode زیر `Program Files` نصب باشد، فایل `app.asar` مال ویندوز است و بدون دسترسی مدیر، نوشتن در آن خطا میدهد (`EPERM`). اگر نصب شما کاربری باشد (قدم ۵ مشخص میکند) هم Admin بیضرر است. پس برای سادگی همیشه Admin بزنید.
-
-### قدم ۴ — بروید داخل پوشه پچ
-
-```powershell
-cd "C:\Users\YOU\Desktop\rtl-chat-patch"
-```
-
-مسیر را با جایی که واقعاً پوشه را باز کردهاید عوض کنید.
-
-> ⚠️ اگر گفت **`Cannot find path ... because it does not exist`** و مطمئنید پوشه هست، شاید دسکتاپ شما داخل OneDrive است. این را بزنید تا مسیر واقعی دسکتاپ را بگوید:
->
-> ```powershell
-> [Environment]::GetFolderPath('Desktop')
-> ```
->
-> خروجی (مثلاً `C:\Users\YOU\OneDrive\Desktop`) را در دستور `cd` بالا بگذارید.
-
-> ⚠️ اگر گفت **`A positional parameter cannot be found`** یعنی `/d` بعد از `cd` نوشتید. آن مال CMD است — در PowerShell فقط `cd "مسیر"` بزنید.
-
-### قدم ۵ — بگویید ZCode کجا نصب شده
-
-بعضیها زیر `Program Files`، بعضیها زیر `AppData`. ویندوز بگوید:
-
-```powershell
-Get-ChildItem -Path "$env:LOCALAPPDATA\Programs","C:\Program Files" -Filter "ZCode.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 3 FullName
-```
-
-خروجی چیزی شبیه این است:
-
-```
-C:\Users\YOU\AppData\Local\Programs\ZCode\ZCode.exe
-```
-
-یا:
-
-```
-C:\Program Files\ZCode\ZCode.exe
-```
-
-این مسیر را یادداشت کنید — در قدم ۶ لازم میشود.
-
-### قدم ۶ — پچ را بزنید
-
-یک خط زیر را کامل کپی کنید و بچسبانید (دقت کنید **«;»** بین دو بخش هست):
-
-```powershell
-$env:ZCODE_ASAR = "جای_قدم_۵\resources\app.asar"; node asar-work\patch-asar.mjs --apply
-```
-
-مثال برای نصب کاربری:
-
-```powershell
-$env:ZCODE_ASAR = "C:\Users\YOU\AppData\Local\Programs\ZCode\resources\app.asar"; node asar-work\patch-asar.mjs --apply
-```
-
-مثال برای نصب زیر Program Files:
-
-```powershell
-$env:ZCODE_ASAR = "C:\Program Files\ZCode\resources\app.asar"; node asar-work\patch-asar.mjs --apply
-```
-
-پیامهای سالم چیزی شبیه به اینهاست:
-
-- `already patched` یا `APPLY DONE`
-- `has load-extension true`
-- `has loadExtension true`
-
-اگر **`app.asar not found`** دیدید: یعنی مسیر قدم ۵ اشتباه است یا `resources\app.asar` آخرش نیست — مسیر را درست کنید و دوباره بزنید.
-
-اگر **`anchor ... missing`** دیدید: یعنی نسخه ZCode فرق کرده و این پچ با این ورژن نمیخواند — اسکرینشات خطا را برای کسی که پکیج را داده بفرستید.
-
-### قدم ۷ — ZCode را عادی باز کنید
-
-مثل همیشه، بدون هیچ فلگ اضافه — همان آیکون دسکتاپ.
-
-### قدم ۸ — چک کنید کار کرده
-
-1. چند ثانیه صبر کنید.
-2. در **گوشه پایین-راست** پنجره ZCode باید یک برچسب قرمز کوچک **RTL** ببینید.
-3. یک پیام فارسی بفرستید: باید **راستچین** باشد و حباب پیام شما سمت **راست** بماند.
-4. یک پیام انگلیسی بفرستید: باید **چپچین** بماند (جهت از **اولین کلمه** تشخیص داده میشود).
-5. کد، جدول و ریاضیات همچنان چپچین و مرتب میمانند.
-
-**تمام.** از این به بعد هر بار فقط ZCode را عادی باز کنید.
-
----
-
-## تأیید فنی (اختیاری — فقط خواندن)
-
-اگر برچسب RTL نمیبینید یا میخواهید مطمئن شوید:
-
-1. ZCode را **کامل** ببندید.
-2. این را در پوشه پچ بزنید (Admin یا عادی فرقی ندارد):
-
-```powershell
-Start-Process "جای_قدم_۵\ZCode.exe" -ArgumentList "--remote-debugging-port=9229"
-```
-
-3. چند ثانیه صبر کنید، بعد (در همان پوشه پچ):
-
-```powershell
-node verify-no-inject.mjs
-```
-
-خروجی باید شامل اینها باشد:
-
-- `badge=true`
-- `style=true`
-- `rtlAttr=on`
-
-اگر همه `false` بود → پچ apply نشده یا ZCode آپدیت شده و پچ پاک شده (بخش بعدی).
-
-> نکته: `vias` و `booted` ممکن است خالی/false باشند. این طبیعی است — افزونه در «دنیای ایزوله» مرورگر اجرا میشود. مدرک واقعی همان **badge** و **style** در DOM است.
-
-بعد از تست، ZCode را کامل ببندید و دفعات بعد عادی باز کنید (پورت 9229 فقط برای تأیید لازم است).
-
----
-
-## بعد از آپدیت ZCode
-
-آپدیت خودکار ZCode فایل `app.asar` را با نسخه اصلی **جایگزین** میکند و پچ از بین میرود.
-
-هر وقت بعد از آپدیت برچسب RTL ناپدید شد:
-
-1. ZCode را کامل ببندید.
-2. ترمینال PowerShell را در پوشه پچ باز کنید (قدم ۳ و ۴) و همان دستور قدم ۶ را دوباره بزنید:
-
-```powershell
-$env:ZCODE_ASAR = "جای_قدم_۵\resources\app.asar"; node asar-work\patch-asar.mjs --apply
-```
-
-3. ZCode را عادی باز کنید.
-
-اگر بعد از آپدیت خطای `anchor ... missing` گرفتید: ممکن است ساختار داخلی ZCode عوض شده باشد. آن موقع این پچ باید بهروز شود — ریپو/فایل جدید بخواهید.
-
----
-
-## اگر پچ جواب نداد (راه اضطراری)
-
-این روش پچ `app.asar` نمیخواهد؛ فقط برای همان جلسه ZCode را با فلگ باز میکند و افزونه را دستی لود میکند.
-
-**قدم ۱ — ZCode را کامل ببندید** (مثل قبل).
-
-**قدم ۲ — bat را اجرا کنید** (در پوشه پچ، ترجیحاً Admin):
-
-```powershell
-.\start-zcode-rtl.bat
-```
-
-بعد چند ثانیه: برچسب RTL باید بیاید.
-
-**قدم ۳ — (اختیاری) تأیید:**
-
-```powershell
-node inject-cdp.mjs --verify
-```
-
----
-
-## بازگردانی به حالت قبل از پچ
-
-اگر خواستید همهچیز را مثل اول کنید:
-
-1. ZCode را کامل ببندید.
-2. در پوشه پچ (Admin اگر نصب Program Files است):
-
-```powershell
-Copy-Item -Force asar-work\app.asar.bak "جای_قدم_۵\resources\app.asar"
-```
-
-(اگر خطای دسترسی گرفتید، ترمینال را با Run as administrator باز کنید و دوباره بزنید.)
-
-3. ZCode را باز کنید. دیگر خبری از RTL نیست.
-
----
-
-## ویرایش کد (اگر خواستید چیزی عوض کنید)
-
-1. `rtl-chat.js` (منبع) را ویرایش کنید.
-2. کپی کنید داخل پوشه افزونه:
-
-```powershell
-Copy-Item -Force rtl-chat.js extension\rtl-chat.js
-```
-
-3. کد را چک کنید:
-
-```powershell
-node --check rtl-chat.js
-```
-
-4. ZCode را کامل ببندید و دوباره باز کنید (پچ `app.asar` همان مسیر `extension` را لود میکند — نیازی به زدن دوبارهٔ patch نیست، مگر اینکه **مسیر پوشه zip** را عوض کرده باشید؛ آنوقت دوباره قدم ۶ را بزنید).
-
----
-
-## عیبیابی سریع
-
-| مشکل | چه کنیم |
-|------|---------|
-| `Cannot find path ... does not exist` | مسیر دسکتاپ را با `[Environment]::GetFolderPath('Desktop')` بگیرید (بعضیها OneDrive دارند). |
-| `A positional parameter cannot be found` | دارید با CMD می‌زنید یا `/d` گذاشتید. در PowerShell فقط `cd "مسیر"`. |
-| `app.asar not found` | مسیر قدم ۵ را چک کنید؛ حتماً باید `...\resources\app.asar` تمام شود. |
-| برچسب RTL نیست | ZCode را کامل ببندید و دوباره باز کنید. اگر آپدیت شده، دوباره پچ بزنید. |
-| خطا `EPERM` موقع patch | با Terminal **Admin** اجرا کنید (یا در قدم ۶ مسیر `ZCODE_ASAR` را درست کنید). |
-| خطا `anchor missing` | نسخه ZCode فرق کرده — این پچ با آن ورژن نمیخواند. |
-| `node` پیدا نشد | Node را نصب کنید و ترمینال را **ببندید و دوباره** باز کنید. |
-| CDP جواب نمیدهد | مطمئن شوید با `--remote-debugging-port=9229` باز شده (بخش تأیید). |
-| چت هنوز چپچین است | بررسی: `node verify-no-inject.mjs` → آیا `badge=true` است؟ |
-| پوشه را جابجا کردم و خراب شد | دوباره قدم ۶ را بزنید (مسیر extension نسبی است و باید خودش پیدا کند). |
-
----
-
-## نکتههای امنیتی / عملی
-
-- پچ فقط **یک فایل داخلی نصب ZCode** (`app.asar`) را تغییر میدهد و افزونه را از **پوشه همین zip** لود میکند. پوشه را بعداً پاک نکنید، وگرنه ZCode موقع بالا آمدن افزونه را پیدا نمیکند (خطای ظریف، چت برمیگردد به حالت چپچین).
-- موقع آپدیت ZCode، پچ از بین میرود — هر بار بعد از آپدیت دوباره بزنید.
-- قبل از هر چیز، `asar-work\app.asar.bak` را نگه دارید.
-- locale رسمی ZCode فقط `system` / `zh-CN` / `en-US` است؛ راستچین از تنظیمات داخلی خود ZCode نمیآید — برای همین این پکیج لازم است.
-
----
-
-## خلاصه یک خطی
-
-**ببند → PowerShell: `cd "پوشه پچ"` → پچ بزن (`$env:ZCODE_ASAR=...; node asar-work\patch-asar.mjs --apply`) → عادی باز کن → دنبال برچسب قرمز RTL بگرد.**
-
-بعد از هر آپدیت ZCode، همان یک خط پچ را دوباره بزن.
-
-</details>
+## 🙏 Credits
+
+- Original patch & ZCode DOM mapping: [the-Ashkanian/rtl-chat-zcode](https://github.com/the-Ashkanian/rtl-chat-zcode)
+- any-rtl detection ported from [zamanimm/obsidian-any-rtl](https://github.com/zamanimm/obsidian-any-rtl) (which builds on [Content RTL](https://github.com/SirwanAfifi/content-rtl) and [RTL Support](https://github.com/esm7/obsidian-rtl))
+- Font: [Vazirmatn](https://github.com/rastikerdar/vazirmatn) by Saber Rastikerdar

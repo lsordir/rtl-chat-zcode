@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from 'node:fs'
+import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
@@ -9,8 +9,11 @@ const VERIFY = process.argv.includes('--verify')
 const SHOT_ARG = process.argv.find(a => a.startsWith('--shot='))
 const SHOT_PATH = SHOT_ARG ? SHOT_ARG.slice('--shot='.length) : join(__dirname, 'verify.png')
 
+// prefer the built extension script (fonts embedded) over the raw source
+const built = join(__dirname, 'extension', 'rtl-chat.js')
+const srcFile = existsSync(built) ? built : join(__dirname, 'rtl-chat.js')
 const source = `window.__RTL_CHAT_VIA = 'cdp';\n` +
-  readFileSync(join(__dirname, 'rtl-chat.js'), 'utf8')
+  readFileSync(srcFile, 'utf8')
 
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 
@@ -121,9 +124,9 @@ async function main() {
         const info = await evalIn(c, `JSON.stringify({
           booted: !!window.__RTL_CHAT_BOOTED,
           via: window.__RTL_CHAT_VIAS || [],
+          mode: (window.__RTL_CHAT || {}).mode,
           style: !!document.getElementById('rtl-chat-style'),
-          badge: !!document.getElementById('rtl-chat-badge'),
-          badgeText: (document.getElementById('rtl-chat-badge')||{}).textContent || '',
+          toggle: !!document.getElementById('rtl-chat-toggle'),
           rtlAttr: document.documentElement.getAttribute('data-rtl-chat'),
           chat: !!document.querySelector('[data-workspace-conversation-frame]'),
           timeline: !!document.querySelector('[data-v4-timeline-scroll]'),

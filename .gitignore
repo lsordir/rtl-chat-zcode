@@ -1,0 +1,5 @@
+asar-work/app.asar.bak
+asar-work/index.js.orig
+asar-work/index.js.patched
+*.bak
+verify.png
