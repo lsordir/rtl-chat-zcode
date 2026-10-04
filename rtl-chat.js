@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = '0.3.2'
+  const VERSION = '0.3.3'
   const STYLE_ID = 'rtl-chat-style'
   const CHROME_STYLE_ID = 'rtl-chat-chrome'
   const TOGGLE_ID = 'rtl-chat-toggle'
@@ -14,7 +14,7 @@
   // reasoning UI, actions) keeps its own LTR layout. Direction is decided per
   // text block by JS (any-rtl) — only produced text flips.
   const CSS = `
-/* RTL Chat v0.3.2 — any-rtl: direction decided per text block by RTL-character
+/* RTL Chat v0.3.3 — any-rtl: direction decided per text block by RTL-character
    presence (not first word). Containers stay LTR. */
 
 [data-trajectory-message-role],
@@ -223,7 +223,8 @@ samp,
 
   function applyDir(el, emptyDefault) {
     if (!el || getMode() === 'off') return
-    const text = el.innerText || el.textContent || ''
+    // textContent — no forced layout, much cheaper than innerText on every scan
+    const text = el.textContent || ''
     let d = detectDir(text)
     if (!d && !text.trim() && emptyDefault) d = emptyDefault
     if (!d) return
@@ -310,12 +311,14 @@ samp,
     }
   }
 
-  function toggleSvg(off) {
-    return '<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" ' +
-      'stroke-width="1.7" stroke-linecap="round" aria-hidden="true">' +
-      '<path d="M3 3.5h10M6.5 8H13M4.5 12.5H13"/>' +
-      (off ? '<path d="M2.5 13.5L13.5 2.5"/>' : '') +
-      '</svg>'
+  // "Fa" language chip. On: filled chip at full strength; off: dimmed, flat.
+  function toggleFace(on) {
+    const chip = on
+      ? 'background:rgba(127,127,140,0.28)'
+      : 'background:transparent;opacity:0.5'
+    return '<span style="display:flex;align-items:center;justify-content:center;width:100%;height:100%">' +
+      '<span style="font:800 11px/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.03em;' +
+      'padding:3px 6px;border-radius:6px;' + chip + '">Fa</span></span>'
   }
 
   function firstVisibleButton(root) {
@@ -326,56 +329,65 @@ samp,
     return null
   }
 
-  // Composer toolbar to host the toggle — nearest stable anchor first
+  // Composer toolbar to host the toggle. Prefer a tools group WITHOUT the send
+  // button (left side); fall back to any toolbar with a visible button.
   function toolbarFor() {
-    const docks = document.querySelectorAll('[data-v4-composer-dock]')
     const sels = [
       'form [class*="group/toolbar"]',
       '[class*="group/toolbar"]',
       'form [class*="toolbar"]',
       '[class*="toolbar"]'
     ]
-    for (const dock of docks) {
+    const hasSend = t => !!t.querySelector(
+      'button[type="submit"], button[aria-label*="send" i], button[data-testid*="send" i]')
+    const candidates = []
+    for (const dock of document.querySelectorAll('[data-v4-composer-dock]')) {
       for (const sel of sels) {
-        let tb = null
-        try { tb = dock.querySelector(sel) } catch (_) { continue }
-        if (tb && firstVisibleButton(tb)) return tb
+        let found = false
+        try {
+          for (const tb of dock.querySelectorAll(sel)) {
+            if (firstVisibleButton(tb)) { candidates.push(tb); found = true }
+          }
+        } catch (_) { continue }
+        if (found) break // stop at the first (most specific) selector level that matches
       }
     }
-    return null
+    return candidates.find(t => !hasSend(t)) || candidates[0] || null
   }
+
+  // Boot grace: the composer mounts late in React — until the toolbar shows up
+  // (or the grace expires) keep NO button instead of flashing the floating one.
+  let firstMiss = 0
+  const FLOAT_GRACE_MS = 5000
 
   function ensureButton() {
     const tb = toolbarFor()
-    const wantHost = tb ? 'bar' : 'float'
     let btn = document.getElementById(TOGGLE_ID)
-    if (btn && btn.isConnected && btn.dataset.rtlChatHost === wantHost) {
-      updateToggle()
-      return
-    }
-    if (btn) btn.remove()
-    btn = document.createElement('button')
-    btn.id = TOGGLE_ID
-    btn.type = 'button'
-    btn.draggable = false
     if (tb) {
+      firstMiss = 0
+      if (btn && btn.isConnected && btn.dataset.rtlChatHost === 'bar' && btn.parentElement === tb) {
+        updateToggle()
+        return
+      }
+      if (btn) btn.remove()
+      btn = document.createElement('button')
+      btn.id = TOGGLE_ID
+      btn.type = 'button'
+      btn.draggable = false
       // borrow a visible sibling button's classes so the toggle blends into ZCode's toolbar
       const sibling = firstVisibleButton(tb)
       if (sibling) btn.className = sibling.className
       btn.classList.add('rtl-chat-inbar')
-    }
-    btn.innerHTML = toggleSvg(getMode() === 'off')
-    btn.__rtlSvg = btn.innerHTML
-    btn.addEventListener('mousedown', e => e.preventDefault())
-    btn.addEventListener('click', e => {
-      e.preventDefault()
-      e.stopPropagation()
-      setMode(getMode() === 'off' ? 'any-rtl' : 'off')
-    })
-    const host = tb || document.body
-    if (!host) return
-    host.appendChild(btn)
-    if (tb) {
+      btn.innerHTML = toggleFace(getMode() !== 'off')
+      btn.__face = btn.innerHTML
+      btn.style.marginRight = '4px'
+      btn.addEventListener('mousedown', e => e.preventDefault())
+      btn.addEventListener('click', e => {
+        e.preventDefault()
+        e.stopPropagation()
+        setMode(getMode() === 'off' ? 'any-rtl' : 'off')
+      })
+      tb.insertBefore(btn, tb.firstChild) // left end of the toolbar
       // cloned classes must not hide the toggle — if they do, go floating instead
       const r = btn.getBoundingClientRect()
       if (r.width > 0 && r.height > 0) {
@@ -383,11 +395,33 @@ samp,
         updateToggle()
         return
       }
+      btn.remove()
+    } else if (!firstMiss) {
+      firstMiss = Date.now()
     }
     // floating fallback with inline geometry — can never lose visibility
+    if (btn && btn.isConnected && btn.dataset.rtlChatHost === 'float') {
+      updateToggle()
+      return
+    }
+    if (btn) btn.remove()
+    if (Date.now() - (firstMiss || 0) < FLOAT_GRACE_MS) return // stay hidden during boot
+    btn = document.createElement('button')
+    btn.id = TOGGLE_ID
+    btn.type = 'button'
+    btn.draggable = false
     btn.className = 'rtl-chat-fallback'
     btn.style.cssText = FALLBACK_CSS_TEXT
-    if (btn.parentElement !== document.body) document.body.appendChild(btn)
+    btn.innerHTML = toggleFace(getMode() !== 'off')
+    btn.__face = btn.innerHTML
+    btn.addEventListener('mousedown', e => e.preventDefault())
+    btn.addEventListener('click', e => {
+      e.preventDefault()
+      e.stopPropagation()
+      setMode(getMode() === 'off' ? 'any-rtl' : 'off')
+    })
+    if (!document.body) return
+    document.body.appendChild(btn)
     btn.dataset.rtlChatHost = 'float'
     updateToggle()
   }
@@ -398,13 +432,13 @@ samp,
     const on = getMode() !== 'off'
     btn.setAttribute('aria-pressed', on ? 'true' : 'false')
     btn.title = on ? 'راست‌چین: روشن (any-rtl)' : 'راست‌چین: خاموش'
-    const svg = toggleSvg(!on)
-    if (btn.__rtlSvg !== svg) {
-      btn.innerHTML = svg
-      btn.__rtlSvg = svg
+    const face = toggleFace(on)
+    if (btn.__face !== face) {
+      btn.innerHTML = face
+      btn.__face = face
     }
     // inline opacity — independent of any stylesheet
-    btn.style.opacity = on ? (btn.dataset.rtlChatHost === 'bar' ? '' : '0.85') : '0.5'
+    btn.style.opacity = btn.dataset.rtlChatHost === 'float' ? '0.85' : '1'
   }
 
   function debugInfo() {
@@ -439,12 +473,16 @@ samp,
     if (window.__RTL_CHAT_TIMER) clearInterval(window.__RTL_CHAT_TIMER)
     window.__RTL_CHAT_TIMER = setInterval(tick, 2000)
 
-    // live re-direction while streaming (2s interval stays as a safety net)
+    // live re-direction while streaming (2s interval stays as a safety net).
+    // THROTTLE, not debounce: a debounce resets on every mutation batch and
+    // starves during heavy re-renders (task switches) — the pending run here
+    // always fires ≤120ms after the first change, no matter how long the
+    // mutation storm lasts.
     if (!window.__RTL_CHAT_MO && (document.body || document.documentElement)) {
-      let t = null
+      let timer = null
       const mo = new MutationObserver(() => {
-        if (t) clearTimeout(t)
-        t = setTimeout(() => { t = null; try { tick() } catch (_) {} }, 150)
+        if (timer) return
+        timer = setTimeout(() => { timer = null; try { tick() } catch (_) {} }, 120)
       })
       mo.observe(document.body || document.documentElement, {
         childList: true,
