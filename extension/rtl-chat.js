@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = '0.3.4'
+  const VERSION = '0.3.5'
   const STYLE_ID = 'rtl-chat-style'
   const CHROME_STYLE_ID = 'rtl-chat-chrome'
   const TOGGLE_ID = 'rtl-chat-toggle'
@@ -15,7 +15,7 @@
   // reasoning UI, actions) keeps its own LTR layout. Direction is decided per
   // text block by JS (any-rtl) — only produced text flips.
   const CSS = `
-/* RTL Chat v0.3.4 — any-rtl app-wide: direction decided per text block by
+/* RTL Chat v0.3.5 — any-rtl app-wide: direction decided per text block by
    RTL-character presence. Containers stay LTR; code/inputs never touched. */
 
 [data-trajectory-message-role],
@@ -287,14 +287,10 @@ samp,
     }
   }
 
-  // "Fa" language chip. On: filled chip; off: dimmed, flat. Inherits the
-  // toolbar button font so it blends with ZCode's own controls.
-  function toggleFace(on) {
-    const chip = on
-      ? 'background:rgba(127,127,140,0.28)'
-      : 'background:transparent;opacity:0.5'
-    return '<span style="display:flex;align-items:center;justify-content:center;width:100%;height:100%">' +
-      '<span style="padding:2px 6px;border-radius:6px;' + chip + '">Fa</span></span>'
+  // "Fa" — plain text, no chip/box. On: full strength like sibling controls;
+  // off: dimmed. Font is inherited from ZCode's own toolbar button.
+  function toggleFace() {
+    return 'Fa'
   }
 
   function firstVisibleButton(root) {
@@ -348,7 +344,10 @@ samp,
     const tb = dock ? toolbarFor() : null
     let btn = document.getElementById(TOGGLE_ID)
     if (tb) {
-      if (btn && btn.isConnected && btn.dataset.rtlChatHost === 'bar' && btn.parentElement === tb) {
+      // keep the existing button when it is already inside THIS toolbar —
+      // tb.contains (not parentElement===) because the anchor may sit in a
+      // wrapper; recreating every tick caused the hover flicker and eaten clicks
+      if (btn && btn.isConnected && btn.dataset.rtlChatHost === 'bar' && tb.contains(btn)) {
         updateToggle()
         return
       }
@@ -361,8 +360,7 @@ samp,
       const sibling = firstVisibleButton(tb)
       if (sibling) btn.className = sibling.className
       btn.classList.add('rtl-chat-inbar')
-      btn.innerHTML = toggleFace(getMode() !== 'off')
-      btn.__face = btn.innerHTML
+      btn.textContent = toggleFace()
       btn.style.marginRight = '4px'
       btn.addEventListener('mousedown', e => e.preventDefault())
       btn.addEventListener('click', e => {
@@ -401,8 +399,7 @@ samp,
     btn.draggable = false
     btn.className = 'rtl-chat-fallback'
     btn.style.cssText = FALLBACK_CSS_TEXT
-    btn.innerHTML = toggleFace(getMode() !== 'off')
-    btn.__face = btn.innerHTML
+    btn.textContent = toggleFace()
     btn.addEventListener('mousedown', e => e.preventDefault())
     btn.addEventListener('click', e => {
       e.preventDefault()
@@ -421,13 +418,8 @@ samp,
     const on = getMode() !== 'off'
     btn.setAttribute('aria-pressed', on ? 'true' : 'false')
     btn.title = on ? 'راست‌چین: روشن (any-rtl)' : 'راست‌چین: خاموش'
-    const face = toggleFace(on)
-    if (btn.__face !== face) {
-      btn.innerHTML = face
-      btn.__face = face
-    }
-    // inline opacity — independent of any stylesheet
-    btn.style.opacity = btn.dataset.rtlChatHost === 'float' ? '0.85' : '1'
+    // inline opacity — independent of any stylesheet; dimmed when off
+    btn.style.opacity = on ? (btn.dataset.rtlChatHost === 'float' ? '0.85' : '1') : '0.45'
   }
 
   function debugInfo() {
