@@ -2,6 +2,12 @@
 <html>
 <head><meta charset="utf-8"><title>RTL Chat Harness</title></head>
 <body>
+  <div data-workspace-sidebar-panel id="sidebar">
+    <div data-task-item-key="1" id="task-row-1">
+      <div id="task-title-fa-wrap"><span id="task-title-fa">تسک اول من</span></div>
+      <div id="task-title-en-wrap"><span id="task-title-en">English task title</span></div>
+    </div>
+  </div>
   <div data-workspace-conversation-frame>
     <div data-v4-timeline-scroll>
       <div data-trajectory-timeline>
@@ -14,7 +20,7 @@
             <p id="p-md">**bold start** and some text</p>
             <p id="p-mixed">ZCode یه ابزار خوبیه</p>
             <p id="p-mixed2">a b ث</p>
-            <div data-streamdown="code-block" id="code-block"><pre><code id="code-inner">const x = 1;</code></pre></div>
+            <div data-streamdown="code-block" id="code-block"><pre><code id="code-inner">const x = 1; // توضیح فارسی</code></pre></div>
           </div>
         </div>
         <div data-trajectory-message-role="user">
@@ -38,6 +44,7 @@
   <div data-v4-composer-dock>
     <form id="composer-form">
       <div class="group/toolbar" id="toolbar">
+        <button type="button" class="tb-btn mode" id="mode-pill">Full access</button>
         <button type="button" class="tb-btn one" id="tb1">A</button>
         <button type="button" class="tb-btn two" id="tb2">B</button>
       </div>

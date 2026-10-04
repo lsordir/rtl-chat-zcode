@@ -5,9 +5,14 @@ import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const APPLY = process.argv.includes('--apply')
+const UNPATCH = process.argv.includes('--unpatch')
 
 // ZCode install path — change only if ZCode is NOT in Program Files
 const ASAR = process.env.ZCODE_ASAR || 'C:/Program Files/ZCode/resources/app.asar'
+
+// Stable, repo-independent backup: survives moving/deleting this folder.
+const STABLE_DIR = path.join(process.env.LOCALAPPDATA || __dirname, 'rtl-chat-zcode')
+const STABLE_BACKUP = path.join(STABLE_DIR, 'app.asar.bak')
 
 // Extension folder sits next to this package: rtl-chat-patch/extension
 // Works no matter where you extract the zip (no hardcoded username).
@@ -80,6 +85,15 @@ function patchSource(src) {
   return out
 }
 
+// Surgical removal of the two injected snippets — no backup needed, and safe
+// even when ZCode updated after the patch was applied.
+function unpatchSource(src) {
+  let out = src, hit = false
+  if (out.includes(injectEarly)) { out = out.split(injectEarly).join(''); hit = true }
+  if (out.includes(injectReady)) { out = out.split(injectReady).join(''); hit = true }
+  return hit ? out : null
+}
+
 if (!fs.existsSync(ASAR)) {
   console.error('app.asar not found:', ASAR)
   console.error('If ZCode is elsewhere, set ZCODE_ASAR to the full path of app.asar')
@@ -105,6 +119,39 @@ console.log('ASAR', ASAR)
 console.log('EXT ', EXT)
 console.log('size', size, 'fileAbs', fileAbs, 'oldHash', String(oldHash).slice(0, 16))
 const src = original.toString('utf8')
+
+if (UNPATCH) {
+  const out = unpatchSource(src)
+  if (!out) {
+    console.log('not patched — nothing to remove')
+    process.exit(0)
+  }
+  let ubuf = Buffer.from(out, 'utf8')
+  if (ubuf.length < size) ubuf = Buffer.concat([ubuf, Buffer.alloc(size - ubuf.length, 0x20)])
+  const newHashU = sha256(ubuf)
+  console.log('final', ubuf.length, 'newHash', newHashU.slice(0, 16))
+  const wu = fs.openSync(ASAR, 'r+')
+  try {
+    fs.writeSync(wu, ubuf, 0, ubuf.length, fileAbs)
+    if (oldHash && oldHash.length === newHashU.length) {
+      const headerBuf = Buffer.alloc(headerBufLen)
+      fs.readSync(wu, headerBuf, 0, headerBufLen, 8)
+      const hashBuf = Buffer.from(oldHash, 'ascii')
+      const idx = headerBuf.indexOf(hashBuf)
+      if (idx < 0) throw new Error('old hash not in header')
+      headerBuf.write(newHashU, idx, 'ascii')
+      fs.writeSync(wu, headerBuf, 0, headerBufLen, 8)
+      console.log('integrity updated @', idx)
+    } else {
+      throw new Error('hash length mismatch or missing')
+    }
+  } finally {
+    fs.closeSync(wu)
+  }
+  console.log('UNPATCH DONE — RTL extension removed from ZCode')
+  process.exit(0)
+}
+
 let patched = patchSource(src)
 let buf = Buffer.from(patched, 'utf8')
 console.log('after inject', buf.length, 'delta', buf.length - size)
@@ -141,6 +188,20 @@ if (!APPLY) {
 if (!fs.existsSync(BACKUP)) {
   console.log('backup...')
   fs.copyFileSync(ASAR, BACKUP)
+}
+
+// pristine-state backup outside the repo (survives folder moves), taken only
+// from an asar that was not patched yet — never from an already-patched one
+if (!src.includes(EXT)) {
+  try {
+    fs.mkdirSync(STABLE_DIR, { recursive: true })
+    if (!fs.existsSync(STABLE_BACKUP)) {
+      fs.copyFileSync(ASAR, STABLE_BACKUP)
+      console.log('stable backup:', STABLE_BACKUP)
+    }
+  } catch (e) {
+    console.warn('stable backup failed (non-fatal):', e.message)
+  }
 }
 
 const wfd = fs.openSync(ASAR, 'r+')

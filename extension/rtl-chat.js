@@ -1,10 +1,9 @@
 (() => {
-  const VERSION = '0.3.3'
+  const VERSION = '0.3.4'
   const STYLE_ID = 'rtl-chat-style'
   const CHROME_STYLE_ID = 'rtl-chat-chrome'
   const TOGGLE_ID = 'rtl-chat-toggle'
   const MODE_KEY = 'rtlChat:mode'
-  const SCOPES_KEY = 'rtlChat:extraScopes'
   const VIA = 'ext'
 
   // '' in source — tools/build.mjs embeds the Vazirmatn data-URI @font-face rules here
@@ -16,8 +15,8 @@
   // reasoning UI, actions) keeps its own LTR layout. Direction is decided per
   // text block by JS (any-rtl) — only produced text flips.
   const CSS = `
-/* RTL Chat v0.3.3 — any-rtl: direction decided per text block by RTL-character
-   presence (not first word). Containers stay LTR. */
+/* RTL Chat v0.3.4 — any-rtl app-wide: direction decided per text block by
+   RTL-character presence. Containers stay LTR; code/inputs never touched. */
 
 [data-trajectory-message-role],
 [data-trajectory-message-content],
@@ -160,13 +159,10 @@ samp,
     try { return localStorage.getItem(MODE_KEY) === 'off' ? 'off' : 'any-rtl' } catch (_) { return 'any-rtl' }
   }
 
-  // Extra areas (tasks panel, etc.) to any-rtl beyond the chat timeline.
-  // Comma-separated CSS selectors in localStorage — empty by default, zero risk.
-  function extraScopes() {
-    try {
-      return (localStorage.getItem(SCOPES_KEY) || '').split(',').map(s => s.trim()).filter(Boolean)
-    } catch (_) { return [] }
-  }
+  // never direct code, math, diffs or text-entry widgets
+  const SKIP_SEL = 'pre, code, kbd, samp, textarea, input, select, option, ' +
+    '[data-streamdown="code-block"], [data-streamdown="inline-code"], .katex, ' +
+    '[data-inline-diff-preview], [data-diff-viewer], [data-diff-span]'
 
   function setMode(m) {
     try { localStorage.setItem(MODE_KEY, m) } catch (_) {}
@@ -207,24 +203,12 @@ samp,
   function cleanup() {
     const style = document.getElementById(STYLE_ID)
     if (style) style.remove()
-    const sel = '[data-v4-timeline-scroll], [data-v4-composer-dock], [data-trajectory-timeline]'
-    const rooted = document.querySelectorAll(sel)
-    for (const root of rooted) {
-      for (const el of root.querySelectorAll('[dir]')) el.removeAttribute('dir')
-      if (root.hasAttribute && root.hasAttribute('dir')) root.removeAttribute('dir')
-    }
-    for (const scope of extraScopes()) {
-      let roots = []
-      try { roots = document.querySelectorAll(scope) } catch (_) { continue }
-      for (const root of roots) {
-        for (const el of root.querySelectorAll('[dir]')) el.removeAttribute('dir')
-        if (root.hasAttribute && root.hasAttribute('dir')) root.removeAttribute('dir')
-      }
-    }
+    for (const el of document.querySelectorAll('body [dir]')) el.removeAttribute('dir')
   }
 
   function applyDir(el, emptyDefault) {
     if (!el || getMode() === 'off') return
+    if (el.closest(SKIP_SEL)) return
     // textContent — no forced layout, much cheaper than innerText on every scan
     const text = el.textContent || ''
     let d = detectDir(text)
@@ -287,18 +271,8 @@ samp,
       }
     }
 
-    const timeline = document.querySelector('[data-v4-timeline-scroll]')
-    if (timeline) scanBlocks(timeline, seen)
-
-    for (const scope of extraScopes()) {
-      let roots = []
-      try { roots = document.querySelectorAll(scope) } catch (_) { continue }
-      for (const root of roots) {
-        if (seen.has(root)) continue
-        seen.add(root)
-        scanBlocks(root, seen)
-      }
-    }
+    // whole app: chat timeline, tasks list, sidebar, dialogs — per-block any-rtl
+    scanBlocks(document.body || document.documentElement, seen)
 
     const ed = document.querySelector('[data-lexical-editor="true"], [data-testid="chat-input"]')
     if (ed && !ed.__rtlChatHooked) {
@@ -313,14 +287,14 @@ samp,
     }
   }
 
-  // "Fa" language chip. On: filled chip at full strength; off: dimmed, flat.
+  // "Fa" language chip. On: filled chip; off: dimmed, flat. Inherits the
+  // toolbar button font so it blends with ZCode's own controls.
   function toggleFace(on) {
     const chip = on
       ? 'background:rgba(127,127,140,0.28)'
       : 'background:transparent;opacity:0.5'
     return '<span style="display:flex;align-items:center;justify-content:center;width:100%;height:100%">' +
-      '<span style="font:800 11px/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.03em;' +
-      'padding:3px 6px;border-radius:6px;' + chip + '">Fa</span></span>'
+      '<span style="padding:2px 6px;border-radius:6px;' + chip + '">Fa</span></span>'
   }
 
   function firstVisibleButton(root) {
@@ -357,16 +331,23 @@ samp,
     return candidates.find(t => !hasSend(t)) || candidates[0] || null
   }
 
-  // Boot grace: the composer mounts late in React — until the toolbar shows up
-  // (or the grace expires) keep NO button instead of flashing the floating one.
-  let firstMiss = 0
-  const FLOAT_GRACE_MS = 5000
+  // The composer mode pill ("Full access", "Plan", ...) — Fa sits to its right.
+  function faAnchor(tb) {
+    const modeRe = /^(?:full access|full-access|agent(?: \(full access\))?|plan|default|auto(?: edit)?|accept edits|read only|don'?t ask|bypass permissions|yolo|build)\b/i
+    for (const el of tb.querySelectorAll('button, [role="combobox"], [role="button"]')) {
+      const t = (el.textContent || '').trim()
+      if (t && modeRe.test(t)) return el
+    }
+    return null
+  }
 
+  // Boot gate: no composer → no button (start/welcome screens stay clean).
+  // No toolbar inside an existing composer → floating fallback above it.
   function ensureButton() {
-    const tb = toolbarFor()
+    const dock = document.querySelector('[data-v4-composer-dock]')
+    const tb = dock ? toolbarFor() : null
     let btn = document.getElementById(TOGGLE_ID)
     if (tb) {
-      firstMiss = 0
       if (btn && btn.isConnected && btn.dataset.rtlChatHost === 'bar' && btn.parentElement === tb) {
         updateToggle()
         return
@@ -389,7 +370,9 @@ samp,
         e.stopPropagation()
         setMode(getMode() === 'off' ? 'any-rtl' : 'off')
       })
-      tb.insertBefore(btn, tb.firstChild) // left end of the toolbar
+      const anchor = faAnchor(tb)
+      if (anchor) anchor.insertAdjacentElement('afterend', btn)
+      else tb.insertBefore(btn, tb.firstChild)
       // cloned classes must not hide the toggle — if they do, go floating instead
       const r = btn.getBoundingClientRect()
       if (r.width > 0 && r.height > 0) {
@@ -398,8 +381,13 @@ samp,
         return
       }
       btn.remove()
-    } else if (!firstMiss) {
-      firstMiss = Date.now()
+    } else if (btn && btn.isConnected && btn.dataset.rtlChatHost === 'bar') {
+      updateToggle() // toolbar mid re-render — keep the working one
+      return
+    }
+    if (!dock) {
+      if (btn) btn.remove()
+      return
     }
     // floating fallback with inline geometry — can never lose visibility
     if (btn && btn.isConnected && btn.dataset.rtlChatHost === 'float') {
@@ -407,7 +395,6 @@ samp,
       return
     }
     if (btn) btn.remove()
-    if (Date.now() - (firstMiss || 0) < FLOAT_GRACE_MS) return // stay hidden during boot
     btn = document.createElement('button')
     btn.id = TOGGLE_ID
     btn.type = 'button'
@@ -451,7 +438,6 @@ samp,
       style: !!document.getElementById(STYLE_ID),
       toggle: !!document.getElementById(TOGGLE_ID),
       toggleHost: (document.getElementById(TOGGLE_ID) || {}).dataset?.rtlChatHost || null,
-      scopes: extraScopes().length,
       ready: document.readyState
     }
   }

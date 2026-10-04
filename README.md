@@ -14,7 +14,8 @@ RTL (right-to-left) chat patch for **ZCode Desktop** — smart **any-rtl**: any 
 
 - **تشخیص any-rtl** — جهت هر پاراگراف از روی *وجود حتی یک حرف فارسی/عربی* در همان پاراگراف. «ZCode یه ابزار خوبیه» راست‌چین میشود؛ پاراگراف انگلیسی کنارش چپ‌چین میماند؛ متنی که با عدد یا مارک‌داون شروع شود هم دیگر راست‌چین نمیشود (رفع باگ issue #1).
 - **فقط متن تولیدشده** — هدرها، لیبل‌ها، رابط thinking، دکمه‌ها و کروم ZCode دست‌نخورده میمانند؛ اسکرول‌بار هم همیشه سمت راست میماند.
-- **دکمه Fa (خاموش/روشن RTL)** — سمت چپ نوار ابزار جعبه پیام. روشن = چیپ پررنگ، خاموش = کدر. در حالت خاموش هم **هیچ‌وقت ناپدید نمیشود**. موقع شروع ZCode هم تا نوار ابزار بالا نیاید دیده نمیشود (بدون فلاش). انتخاب شما ذخیره میشود.
+- **دکمه Fa (خاموش/روشن RTL)** — در نوار ابزار جعبه پیام، دقیقاً سمت راستِ انتخابگر حالت دسترسی (Full access و ...) با فونت و استایل بومی خود ZCode. روشن = چیپ پررنگ، خاموش = کدر. در حالت خاموش هم **هیچ‌وقت ناپدید نمیشود** و در صفحه شروع/خوشآمد اصلاً نشان داده نمیشود — فقط وقتی کامپوزر بالا آمده باشد. انتخاب شما ذخیره میشود.
+- **راست‌چین کل محیط** — علاوه بر چت، لیست تسک‌ها، سایدبار و پنجرهها هم اسکن میشوند: هر متن حاوی حرف فارسی راست‌چین میشود (با فونت وزیرمتن)، متنهای انگلیسی و کروم برنامه دستنخورده میمانند. کد، فرمول، فیلدهای ورودی و دیفها هرگز تغییر نمیکنند.
 - **فونت وزیرمتن** — داخل خود پچ جاسازی شده؛ بدون نصب فونت روی ویندوز و بدون اینترنت. کد و جدول فونت قبلی خودشان را نگه میدارند.
 - **بهروزرسانی زنده** — موقع استریم شدن جواب، جهت پاراگرافها بلافاصله درست میشود.
 
@@ -32,27 +33,28 @@ RTL (right-to-left) chat patch for **ZCode Desktop** — smart **any-rtl**: any 
 
 ### 🗑 حذف با یک کلیک
 
-روی **`uninstall.bat`** دوبار کلیک کنید — بکاپ اصلی را سر جایش برمیگرداند و ZCode دقیقاً مثل قبل میشود.
+روی **`uninstall.bat`** دوبار کلیک کنید. حذف به روش **جراحی** انجام میشود: فقط دو خط تزریقی از `app.asar` برداشته میشود — نیازی به بکاپ نیست و حتی اگر ZCode بعد از نصب آپدیت شده باشد هم درست کار میکند.
 
-> چرا حذف از داخل خود ZCode ممکن نیست؟ چون این پچ در `app.asar` (خارج از دسترس افزونه) نوشته میشود، نه در سیستم افزونه ZCode. اگر روزی ZCode سیستم افزونه رسمی بدهد، همین پکیج میتواند به آن مهاجرت کند.
+**بکاپ دولایه هم به عنوان بیمه نگه داشته میشود:**
+1. **بکاپ پایدار** — موقع نصب (فقط از asar دستنخوردهٔ اولیه) یک کپی کامل در `%LOCALAPPDATA%\rtl-chat-zcode\app.asar.bak` گرفته میشود؛ جای آن به پوشه پروژه وابسته نیست.
+2. **بکاپ محلی** — کنار اسکریپت پچ در `asar-work\app.asar.bak`.
+
+اگر روش جراحی به هر دلیلی شکست خورد، uninstaller خودکار سراغ همین بکاپها میرود. بازگردانی دستی:
+```powershell
+Copy-Item -Force "$env:LOCALAPPDATA\rtl-chat-zcode\app.asar.bak" "مسیر\resources\app.asar"
+```
+
+> چرا حذف از داخل خود ZCode ممکن نیست؟ چون این پچ در `app.asar` (خارج از دسترس افزونه) نوشته میشود، نه در سیستم افزونه ZCode. سیستم پلاگین ZCode فقط skills/commands/hooks/MCP را میشناسد و راهی برای تزریق CSS/JS به رابط چت ندارد.
 
 ### 🎛 استفاده
 
-- **دکمه Fa** کنار جعبه پیام (سمت چپ نوار ابزار): کلیک = خاموش/روشن. حالت در حافظه میماند.
-- کد، جدول، فرمول و ترمینال همیشه چپ‌چین میمانند.
-- خروجی کد و متن انگلیسی خالص دیگر راست‌چین نمیشود.
+- **دکمه Fa** در نوار ابزار جعبه پیام (سمت راستِ انتخابگر Full access): کلیک = خاموش/روشن. حالت در حافظه میماند.
+- کل محیط (چت، تسک‌ها، سایدبار) اسکن میشود؛ فقط متنهای دارای حرف فارسی جهت میگیرند.
+- کد، جدول، فرمول و فیلدهای ورودی همیشه چپ‌چین میمانند.
 
-### 🔧 پیشرفته: راست‌چین کردن بخشهای دیگر (تسک‌ها و ...)
+### 🔧 پیشرفته
 
-به‌صورت پیشفرض فقط تایم‌لاین چت اسکن میشود — صفر ریسک برای بقیه محیط. برای اضافه کردن یک بخش دیگر (مثلاً پنل تسک‌ها)، selector آن بخش را در `localStorage` بگذارید:
-
-```js
-// در کنسول DevTools صفحه چت (Ctrl+Shift+I):
-localStorage.setItem('rtlChat:extraScopes', '[SELECTOR-بخش-موردنظر]')
-// پاک کردن: localStorage.removeItem('rtlChat:extraScopes')
-```
-
-قبل از فعال کردن هر scope جدید، یک بار `install.bat` را دوباره اجرا کنید تا بکاپ تازه باشد و در ریپو هم `git commit` بزنید. selectorهای دقیق تسک‌ها هنوز باید از DOM واقعی ZCode استخراج شوند (با `--remote-debugging-port=9229` قابل بررسی است).
+راست‌چین به صورت app-wide است و نیازی به تنظیم ندارد. اگر خواستید بخشی را مستثنا کنید یا رفتار را محدود کنید، selectorها در `rtl-chat.js` (ثابت‌های `SKIP_SEL`، `DIR_SELECTORS` و `scanBlocks`) قابل ویرایش هستند؛ بعد از تغییر `node tools\build.mjs` را اجرا کنید.
 
 ### ✅ تأیید نصب (اختیاری)
 
@@ -93,13 +95,11 @@ Copy-Item -Force asar-work\app.asar.bak "مسیر\resources\app.asar"
 ## 🇬🇧 English (quick)
 
 1. Install [Node.js](https://nodejs.org).
-2. Double-click **`install.bat`** (it finds ZCode, closes it, patches `app.asar`, keeps a backup in `asar-work\app.asar.bak`).
-3. Start ZCode — use the RTL toggle near the chat input. Click again to turn it off; the button never disappears (slashed icon = off).
-4. Uninstall: double-click **`uninstall.bat`** (restores the original `app.asar`).
+2. Double-click **`install.bat`** (it finds ZCode, closes it, patches `app.asar`, keeps a pristine backup in `%LOCALAPPDATA%\rtl-chat-zcode\app.asar.bak` plus `asar-work\app.asar.bak`).
+3. Start ZCode — the **Fa** toggle sits in the composer toolbar, right of the Full access selector. Click to toggle; it never disappears while the composer exists and never shows on the welcome screen.
+4. Uninstall: double-click **`uninstall.bat`** — surgically removes the two injected snippets (works even after ZCode updates); falls back to the pristine backups.
 
-**any-rtl:** any text block with a Persian/Arabic/Hebrew character → RTL; English-only blocks, code, tables and all UI chrome stay LTR. Scrollbar stays on the right. Vazirmatn font is embedded for RTL text.
-
-**Extra scopes:** `localStorage.setItem('rtlChat:extraScopes', '<css-selector>')` extends any-rtl to other panels (empty by default).
+**any-rtl, app-wide:** any text block with a Persian/Arabic/Hebrew character → RTL (chat, tasks, sidebar, dialogs); English-only blocks, code, tables, inputs and all UI chrome stay LTR. Scrollbar stays on the right. Vazirmatn font is embedded for RTL text.
 
 Re-run `install.bat` after every ZCode update.
 

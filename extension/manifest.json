@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "RTL Chat for ZCode",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "راست‌چین هوشمند (any-rtl) پیام‌ها با دکمه خاموش/روشن و فونت وزیرمتن در ZCode Desktop",
   "content_scripts": [
     {
