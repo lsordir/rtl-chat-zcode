@@ -6,7 +6,7 @@
 
 | Persian | العربية |
 |:---:|:---:|
-| <video src="PASTE-PERSIAN-VIDEO-URL-HERE" controls muted playsinline width="380"></video> | <video src="PASTE-ARABIC-VIDEO-URL-HERE" controls muted playsinline width="380"></video> |
+| <video src="https://github.com/user-attachments/assets/ab6ba04f-870c-47a0-a2f1-44c2895bbf42" controls muted playsinline width="380"></video> | <video src="https://github.com/user-attachments/assets/cb4ca5e3-3121-4827-aff3-45c5d6dd2aac" controls muted playsinline width="380"></video> |
 
 ## ✨ Features
 
