@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = '0.3.5'
+  const VERSION = '0.3.6'
   const STYLE_ID = 'rtl-chat-style'
   const CHROME_STYLE_ID = 'rtl-chat-chrome'
   const TOGGLE_ID = 'rtl-chat-toggle'
@@ -13,7 +13,7 @@
   // reasoning UI, actions) keeps its own LTR layout. Direction is decided per
   // text block by JS (any-rtl) — only produced text flips.
   const CSS = `
-/* RTL Chat v0.3.5 — any-rtl app-wide: direction decided per text block by
+/* RTL Chat v0.3.6 — any-rtl app-wide: direction decided per text block by
    RTL-character presence. Containers stay LTR; code/inputs never touched. */
 
 [data-trajectory-message-role],
@@ -285,10 +285,12 @@ samp,
     }
   }
 
-  // "Fa" — plain text, no chip/box. On: full strength like sibling controls;
-  // off: dimmed. Font is inherited from ZCode's own toolbar button.
+  // The RTL symbol — right-aligned text lines. Language-neutral for Persian,
+  // Arabic and Hebrew alike. Bright when on, dimmed when off (via opacity).
   function toggleFace() {
-    return 'Fa'
+    return '<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" ' +
+      'stroke-width="1.7" stroke-linecap="round" aria-hidden="true">' +
+      '<path d="M3 3.5h10M6.5 8H13M4.5 12.5H13"/></svg>'
   }
 
   function firstVisibleButton(root) {
@@ -325,12 +327,16 @@ samp,
     return candidates.find(t => !hasSend(t)) || candidates[0] || null
   }
 
-  // The composer mode pill ("Full access", "Plan", ...) — Fa sits to its right.
-  function faAnchor(tb) {
-    const modeRe = /^(?:full access|full-access|agent(?: \(full access\))?|plan|default|auto(?: edit)?|accept edits|read only|don'?t ask|bypass permissions|yolo|build)\b/i
-    for (const el of tb.querySelectorAll('button, [role="combobox"], [role="button"]')) {
-      const t = (el.textContent || '').trim()
-      if (t && modeRe.test(t)) return el
+  // The composer mode pill ("Full access", "Plan", ...) — the toggle sits to
+  // its right. Relaxed contains-match over the whole dock: pills may be wrapped
+  // or carry extra text/icons ("⚡ Full access", model name, chevron).
+  function faAnchor(root) {
+    if (!root) return null
+    const modeWord = /(full[ _-]?access|accept[ _-]?edits|bypass[ _-]?permissions|read[ _-]?only|don.?t[ _-]?ask|\byolo\b|\bplan\b|\bagent\b|\bbuild\b|\bauto\b|\bdefault\b)/i
+    for (const el of root.querySelectorAll('button, [role="button"], [role="combobox"], [aria-haspopup]')) {
+      const t = (el.textContent || '').replace(/\s+/g, ' ').trim()
+      if (!t || t.length > 60) continue
+      if (modeWord.test(t)) return el
     }
     return null
   }
@@ -358,7 +364,7 @@ samp,
       const sibling = firstVisibleButton(tb)
       if (sibling) btn.className = sibling.className
       btn.classList.add('rtl-chat-inbar')
-      btn.textContent = toggleFace()
+      btn.innerHTML = toggleFace()
       btn.style.marginRight = '4px'
       btn.addEventListener('mousedown', e => e.preventDefault())
       btn.addEventListener('click', e => {
@@ -366,9 +372,15 @@ samp,
         e.stopPropagation()
         setMode(getMode() === 'off' ? 'any-rtl' : 'off')
       })
-      const anchor = faAnchor(tb)
-      if (anchor) anchor.insertAdjacentElement('afterend', btn)
-      else tb.insertBefore(btn, tb.firstChild)
+      const anchor = faAnchor(dock)
+      if (anchor) {
+        anchor.insertAdjacentElement('afterend', btn)
+      } else {
+        // no pill found — sit at the right end of the leading (left-side) tools
+        const leading = tb.querySelector('[data-composer-leading-content]')
+        if (leading) leading.appendChild(btn)
+        else tb.insertBefore(btn, tb.firstChild)
+      }
       // cloned classes must not hide the toggle — if they do, go floating instead
       const r = btn.getBoundingClientRect()
       if (r.width > 0 && r.height > 0) {
@@ -397,7 +409,7 @@ samp,
     btn.draggable = false
     btn.className = 'rtl-chat-fallback'
     btn.style.cssText = FALLBACK_CSS_TEXT
-    btn.textContent = toggleFace()
+    btn.innerHTML = toggleFace()
     btn.addEventListener('mousedown', e => e.preventDefault())
     btn.addEventListener('click', e => {
       e.preventDefault()

@@ -44,9 +44,17 @@
   <div data-v4-composer-dock>
     <form id="composer-form">
       <div class="group/toolbar" id="toolbar">
-        <button type="button" class="tb-btn mode" id="mode-pill">Full access</button>
-        <button type="button" class="tb-btn one" id="tb1">A</button>
-        <button type="button" class="tb-btn two" id="tb2">B</button>
+        <div class="pill-wrap" id="pill-wrap">
+          <button type="button" class="tb-btn mode" id="mode-pill">⚡ Full access ⌄</button>
+        </div>
+        <div data-composer-leading-actions id="leading-actions">
+          <div data-composer-leading-content id="leading-content">
+            <button type="button" class="tb-btn attach" id="attach-btn">📎</button>
+          </div>
+        </div>
+        <div data-composer-trailing-actions id="trailing-actions">
+          <button type="button" class="tb-btn send" id="send-btn">Send</button>
+        </div>
       </div>
       <div data-testid="chat-input" id="chat-input">
         <div data-lexical-editor="true" id="editor"><p><br></p></div>
