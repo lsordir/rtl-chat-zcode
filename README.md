@@ -1,6 +1,6 @@
 # rtl-zcode
 
-**RTL for ZCode Desktop — done right.** Smart **any-rtl**: any text block containing a Persian/Arabic character flows right-to-left; English text, code, tables and all UI chrome stay left-aligned.
+**RTL for ZCode Desktop — done right.** Smart **any-rtl**: any text block containing an RTL character (Persian, Arabic, Hebrew, …) flows right-to-left; English text, code, tables and all UI chrome stay left-aligned.
 
 ## 🎬 Demo
 
@@ -12,7 +12,7 @@
 
 - **Any-rtl detection** — decided per text block by RTL-character *presence*, not the first word. `ZCode یه ابزار خوبیه` → RTL, English paragraphs → LTR. Code, tables, math, inputs and diffs are never touched.
 - **App-wide** — chat, task list, sidebar, dialogs.
-- **`Fa` toggle** — in the composer toolbar, right of the mode selector. Click to turn RTL on/off; the choice persists. The button never disappears and never shows on the welcome screen.
+- **RTL toggle** — an RTL-symbol icon in the composer toolbar, right of the mode selector. Click to turn RTL on/off; the choice persists. The button never disappears and never shows on the welcome screen.
 - **Vazirmatn font** — embedded (~100 KB, no install, no internet), applied only to RTL text.
 - **Live** — directions fix themselves while responses stream.
 - **One-click install & uninstall** — no terminal needed.
@@ -31,7 +31,7 @@ Prerequisite: [Node.js](https://nodejs.org).
 
 Double-click **`uninstall.bat`**. It surgically removes the two injected snippets from `app.asar` — no backup needed, works even if ZCode updated since. Pristine backups (kept in `%LOCALAPPDATA%\rtl-chat-zcode\app.asar.bak` and `asar-work\app.asar.bak`) are restored automatically if the surgical path ever fails.
 
-## 🎛 The Fa toggle
+## 🎛 The RTL toggle
 
 Sits in the composer toolbar next to the permission mode selector:
 
@@ -47,7 +47,7 @@ Sits in the composer toolbar next to the permission mode selector:
 | `EPERM` while patching | Run PowerShell as Administrator. |
 | `anchor missing` | Your ZCode version changed the internals — the patch needs an update. |
 | Toggle missing after update | Run `install.bat` again. |
-| Everything still LTR | Check the `Fa` toggle (dimmed = off). |
+| Everything still LTR | Check the RTL toggle (dimmed = off). |
 
 ---
 
@@ -64,7 +64,7 @@ Sits in the composer toolbar next to the permission mode selector:
 
 - **تشخیص any-rtl** — جهت هر پاراگراف از روی وجود حتی یک حرف فارسی/عربی در همان پاراگراف؛ نه از روی کلمه اول. متن انگلیسی، کد، جدول، فرمول و فیلدهای ورودی هرگز تغییر نمیکنند.
 - **کل محیط** — چت، لیست تسکها، سایدبار و پنجرهها.
-- **دکمه Fa** — در نوار ابزار جعبه پیام، کنار انتخابگر حالت دسترسی. کلیک = خاموش/روشن؛ انتخاب در حافظه میماند و دکمه هیچوقت ناپدید نمیشود.
+- **دکمه راست‌چین (نماد RTL)** — در نوار ابزار جعبه پیام، سمت راستِ انتخابگر حالت دسترسی. کلیک = خاموش/روشن؛ انتخاب در حافظه میماند و دکمه هیچوقت ناپدید نمیشود.
 - **فونت وزیرمتن** — داخل پچ جاسازی شده؛ بدون نصب و بدون اینترنت، فقط برای متنهای راست‌چین.
 - **بهروزرسانی زنده** — جهت متنها موقع استریم شدن جواب فوراً درست میشود.
 
@@ -106,7 +106,7 @@ node asar-work\patch-asar.mjs --apply    # باید ببینید: APPLY DONE
 
 - **كشف any-rtl**: يُحدَّد اتجاه كل فقرة بحسب وجود أي حرف RTL فيها، وليس بحسب الكلمة الأولى. الشيفرات والجداول والمعادلات وحقول الإدخال لا تُمَس أبداً.
 - **على مستوى التطبيق كله**: المحادثات وقائمة المهام والشريط الجانبي والحوارات.
-- **زر Fa**: في شريط أدوات صندوق الكتابة بجانب محدد صلاحيات الوصول؛ نقرة واحدة للتفعيل أو التعطيل، والاختيار محفوظ، والزر لا يختفي أبداً.
+- **زر RTL (رمز المحاذاة يميناً)**: في شريط أدوات صندوق الكتابة، يمين محدد صلاحيات الوصول؛ نقرة واحدة للتفعيل أو التعطيل، والاختيار محفوظ، والزر لا يختفي أبداً.
 - **خط وزيرمتن (Vazirmatn)**: مضمّن داخل الإضافة (~100 كيلوبايت) بلا تثبيت ولا إنترنت، ويُطبق على النصوص RTL فقط.
 - **تحديث فوري**: تُصحَّح الاتجاهات أثناء توليد الردود مباشرة.
 
