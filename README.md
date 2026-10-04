@@ -2,6 +2,12 @@
 
 **RTL for ZCode Desktop — done right.** Smart **any-rtl**: any text block containing a Persian/Arabic character flows right-to-left; English text, code, tables and all UI chrome stay left-aligned.
 
+## 🎬 Demo
+
+| Persian | العربية |
+|:---:|:---:|
+| <video src="PASTE-PERSIAN-VIDEO-URL-HERE" controls muted playsinline width="380"></video> | <video src="PASTE-ARABIC-VIDEO-URL-HERE" controls muted playsinline width="380"></video> |
+
 ## ✨ Features
 
 - **Any-rtl detection** — decided per text block by RTL-character *presence*, not the first word. `ZCode یه ابزار خوبیه` → RTL, English paragraphs → LTR. Code, tables, math, inputs and diffs are never touched.
