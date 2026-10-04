@@ -74,23 +74,32 @@ function freeNewlines(src, need) {
 }
 
 function patchSource(src) {
-  if (src.includes(EXT) && src.includes('load-extension')) {
-    console.log('already patched')
-    return src
-  }
-  if (!src.includes(anchorRemote)) throw new Error('anchor remote missing')
-  if (!src.includes(anchorReady)) throw new Error('anchor whenReady missing')
-  let out = src.replace(anchorRemote, anchorRemote + injectEarly)
+  // clean ANY previous rtl injection (any extension path), then inject fresh —
+  // makes install re-point the asar even if it was patched from another copy
+  const cleaned = unpatchSource(src)
+  let out = cleaned !== null ? cleaned : src
+  if (!out.includes(anchorRemote)) throw new Error('anchor remote missing')
+  if (!out.includes(anchorReady)) throw new Error('anchor whenReady missing')
+  out = out.replace(anchorRemote, anchorRemote + injectEarly)
   out = out.replace(anchorReady, anchorReady + injectReady)
   return out
 }
 
-// Surgical removal of the two injected snippets — no backup needed, and safe
-// even when ZCode updated after the patch was applied.
+// Surgical removal of the injected snippets. Path-independent: matches any
+// extension path, so uninstall works even if the patch was applied from a
+// different copy of this repo.
 function unpatchSource(src) {
   let out = src, hit = false
-  if (out.includes(injectEarly)) { out = out.split(injectEarly).join(''); hit = true }
-  if (out.includes(injectReady)) { out = out.split(injectReady).join(''); hit = true }
+  const patterns = [
+    /try\{Z\.commandLine\.appendSwitch\("load-extension",.*?\)\}catch\(_rtlE\)\{\}/g,
+    /try\{as\.defaultSession\.loadExtension\(.*?\{allowFileAccess:!0\}\)\}catch\(_rtlE\)\{\}/g
+  ]
+  for (const re of patterns) {
+    if (out.match(re)) {
+      out = out.replace(re, '')
+      hit = true
+    }
+  }
   return hit ? out : null
 }
 
@@ -149,10 +158,19 @@ if (UNPATCH) {
     fs.closeSync(wu)
   }
   console.log('UNPATCH DONE — RTL extension removed from ZCode')
+  // readback + verify: no rtl snippet may remain
+  const vfd = fs.openSync(ASAR, 'r')
+  const rb = Buffer.alloc(size)
+  fs.readSync(vfd, rb, 0, size, fileAbs)
+  fs.closeSync(vfd)
+  if (rb.toString('utf8').includes('_rtlE')) throw new Error('verification FAILED — snippets still present')
+  console.log('verified: no rtl injection left in the asar')
   process.exit(0)
 }
 
+const wasPatched = unpatchSource(src) !== null
 let patched = patchSource(src)
+if (wasPatched) console.log('existing rtl patch found — replacing it (extension path refreshed)')
 let buf = Buffer.from(patched, 'utf8')
 console.log('after inject', buf.length, 'delta', buf.length - size)
 
@@ -191,8 +209,8 @@ if (!fs.existsSync(BACKUP)) {
 }
 
 // pristine-state backup outside the repo (survives folder moves), taken only
-// from an asar that was not patched yet — never from an already-patched one
-if (!src.includes(EXT)) {
+// from an asar that had no rtl patch at all — never from an already-patched one
+if (!wasPatched) {
   try {
     fs.mkdirSync(STABLE_DIR, { recursive: true })
     if (!fs.existsSync(STABLE_BACKUP)) {
