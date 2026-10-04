@@ -175,13 +175,26 @@ let buf = Buffer.from(patched, 'utf8')
 console.log('after inject', buf.length, 'delta', buf.length - size)
 
 if (buf.length > size) {
+  // recover the trailing padding left behind by earlier --unpatch runs
+  const trimmed = patched.replace(/\s+$/, '')
+  if (trimmed.length < patched.length) {
+    patched = trimmed
+    buf = Buffer.from(patched, 'utf8')
+    console.log('trimmed trailing padding ->', buf.length, 'delta', buf.length - size)
+  }
+}
+
+if (buf.length > size) {
   const need = buf.length - size + 8
   const { text, freed } = freeNewlines(patched, need)
   buf = Buffer.from(text, 'utf8')
   console.log('freed newlines', freed, 'now', buf.length, 'delta', buf.length - size)
 }
 
-if (buf.length > size) throw new Error('still too long: ' + buf.length)
+if (buf.length > size) {
+  throw new Error('still too long: ' + buf.length +
+    '\n  The extension path does not fit in the asar slack. Run install.bat from the repo copy with the SHORT path (e.g. D:\\rtl-chat-zcode), or move this folder closer to the drive root.')
+}
 if (buf.length < size) {
   buf = Buffer.concat([buf, Buffer.alloc(size - buf.length, 0x20)])
 }
