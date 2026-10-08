@@ -5,8 +5,9 @@
   const VIA = 'ext'
 
   const CSS = `
-/* RTL Chat v0.2.3 — direction decided per message by first word (JS sets [dir]).
-   Timeline keeps rtl as layout shell; message roots override with their own dir. */
+/* RTL Chat v0.2.3 — direction decided per message by first letter (JS sets [dir]).
+   Timeline stays ltr (app default); only Persian messages flip to rtl.
+   User bubbles always sit on the right; assistant Persian goes right, English/code left. */
 
 [data-v4-timeline-scroll],
 [data-v4-timeline-message-layer],
@@ -16,11 +17,11 @@
 [data-v4-draft-greeting],
 [data-v4-draft-suggested-prompts],
 [data-testid="chat-empty"] {
-  direction: rtl;
+  direction: ltr;
 }
 
 /* User row is flex-col + items-end (bubble on the right in original LTR).
-   Inherited rtl flips items-end to the left — force LTR layout only on the row.
+   Kept ltr so user bubbles always stay on the right.
    Text direction still comes from each bubble's own [dir]. */
 [data-v4-timeline-scroll] [class*="group/user-row"] {
   direction: ltr;
@@ -140,14 +141,13 @@ samp,
     '[data-v4-draft-greeting]'
   ]
 
-  // First word → direction: Persian/Arabic letter → rtl, Latin letter → ltr.
-  // Leading digits/punctuation inside that word are skipped; no letter → null.
+  // First letter → direction: Persian/Arabic letter → rtl, Latin letter → ltr.
+  // Leading digits/punctuation/emoji/whitespace are skipped; no letter → null.
   function firstWordDir(text) {
-    const t = String(text || '').replace(/^\s+/, '')
-    if (!t) return null
-    const word = t.match(/^\S+/)
-    if (!word) return null
-    for (const ch of word[0]) {
+    const t = String(text || '')
+    if (!t.trim()) return null
+    for (const ch of t) {
+      if (/\s/.test(ch)) continue
       if (/[؀-ۿݐ-ݿࢠ-ࣿיִ-﷿ﹰ-﻿]/.test(ch)) return 'rtl'
       if (/[A-Za-z]/.test(ch)) return 'ltr'
     }
