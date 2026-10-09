@@ -1,4 +1,5 @@
 import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 import crypto from 'node:crypto'
 import { fileURLToPath } from 'node:url'
@@ -7,11 +8,35 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const APPLY = process.argv.includes('--apply')
 const UNPATCH = process.argv.includes('--unpatch')
 
-// ZCode install path — change only if ZCode is NOT in Program Files
-const ASAR = process.env.ZCODE_ASAR || 'C:/Program Files/ZCode/resources/app.asar'
+// ZCode install path — auto-detected per platform, or set ZCODE_ASAR
+function asarCandidates() {
+  if (process.platform === 'win32') {
+    return [
+      path.join(process.env['ProgramFiles'] || 'C:/Program Files', 'ZCode/resources/app.asar'),
+      path.join(process.env.LOCALAPPDATA || '', 'Programs/ZCode/resources/app.asar')
+    ]
+  }
+  // macOS (and other *nix): default install locations
+  return [
+    '/Applications/ZCode.app/Contents/Resources/app.asar',
+    path.join(os.homedir(), 'Applications/ZCode.app/Contents/Resources/app.asar')
+  ]
+}
+const ASAR = process.env.ZCODE_ASAR ||
+  asarCandidates().find(p => p && fs.existsSync(p)) ||
+  asarCandidates()[0]
 
 // Stable, repo-independent backup: survives moving/deleting this folder.
-const STABLE_DIR = path.join(process.env.LOCALAPPDATA || __dirname, 'rtl-chat-zcode')
+function stableDir() {
+  if (process.platform === 'win32') {
+    return path.join(process.env.LOCALAPPDATA || __dirname, 'rtl-chat-zcode')
+  }
+  if (process.platform === 'darwin') {
+    return path.join(os.homedir(), 'Library/Application Support/rtl-chat-zcode')
+  }
+  return path.join(os.homedir(), '.local/share/rtl-chat-zcode')
+}
+const STABLE_DIR = stableDir()
 const STABLE_BACKUP = path.join(STABLE_DIR, 'app.asar.bak')
 
 // Extension folder sits next to this package: rtl-chat-patch/extension
@@ -132,6 +157,12 @@ const src = original.toString('utf8')
 if (UNPATCH) {
   const out = unpatchSource(src)
   if (!out) {
+    if (src.includes('_rtlE')) {
+      // rtl snippet present but not recognized — let the uninstaller
+      // restore the pristine backup instead of reporting success
+      console.error('rtl snippet present but pattern not recognized')
+      process.exit(1)
+    }
     console.log('not patched — nothing to remove')
     process.exit(0)
   }
@@ -193,7 +224,7 @@ if (buf.length > size) {
 
 if (buf.length > size) {
   throw new Error('still too long: ' + buf.length +
-    '\n  The extension path does not fit in the asar slack. Run install.bat from the repo copy with the SHORT path (e.g. D:\\rtl-chat-zcode), or move this folder closer to the drive root.')
+    '\n  The extension path does not fit in the asar slack. Run the installer from the repo copy with the SHORT path (e.g. ~/rtl-zcode or D:\\rtl-chat-zcode), or move this folder closer to the drive root.')
 }
 if (buf.length < size) {
   buf = Buffer.concat([buf, Buffer.alloc(size - buf.length, 0x20)])
